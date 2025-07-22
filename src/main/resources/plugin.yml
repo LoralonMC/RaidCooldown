@@ -1,0 +1,49 @@
+name: RaidCooldown
+version: '1.0.0'
+main: net.vanillymc.raidcooldown.RaidCooldown
+api-version: '1.21'
+prefix: RaidCooldown >
+authors: [Loralon]
+description: 'Adds configurable cooldowns to raids with persistent storage and comprehensive management commands.'
+website: 'https://github.com/loralonMC/raidcooldown'
+
+# Soft dependencies for enhanced compatibility
+softdepend: [PlaceholderAPI]
+
+commands:
+  raidcooldown:
+    description: 'Manage raid cooldowns - check status, reset cooldowns, or reload config'
+    usage: '/<command> [check <player>] [reset <player>] [reload] [info]'
+    aliases: [rc, raidcd]
+    permission-message: '&cYou do not have permission to use this command.'
+
+permissions:
+  raidcooldown.*:
+    description: 'Grants access to all RaidCooldown commands'
+    default: op
+    children:
+      raidcooldown.check: true
+      raidcooldown.reset: true
+      raidcooldown.reload: true
+      raidcooldown.info: true
+      raidcooldown.bypass: true
+
+  raidcooldown.check:
+    description: 'Allows checking other players raid cooldown status'
+    default: op
+
+  raidcooldown.reset:
+    description: 'Allows resetting another players raid cooldown'
+    default: op
+
+  raidcooldown.reload:
+    description: 'Allows reloading the plugin configuration'
+    default: op
+
+  raidcooldown.info:
+    description: 'Allows viewing plugin information and statistics'
+    default: op
+
+  raidcooldown.bypass:
+    description: 'Bypasses raid cooldowns entirely'
+    default: false
