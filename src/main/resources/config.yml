@@ -33,6 +33,13 @@ messages:
   # Admin messages
   resetCooldownMessage: "<#B2FBA9>ʀᴀɪᴅ ᴄᴏᴏʟᴅᴏᴡɴ ꜰᴏʀ <#A180D0>{player} <#B2FBA9>ʜᴀꜱ ʙᴇᴇɴ ʀᴇꜱᴇᴛ."
   cooldownResetNotification: "<#B2FBA9>ʏᴏᴜʀ ʀᴀɪᴅ ᴄᴏᴏʟᴅᴏᴡɴ ʜᴀꜱ ʙᴇᴇɴ ʀᴇꜱᴇᴛ ʙʏ ᴀɴ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴛᴏʀ."
+  reloadError: "<#FBA9A9>ᴇʀʀᴏʀ ʀᴇʟᴏᴀᴅɪɴɢ ᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ: <#A180D0>{error}"
+
+  # Info command messages
+  infoHeader: "<#A180D0>=== ʀᴀɪᴅᴄᴏᴏʟᴅᴏᴡɴ ɪɴꜰᴏ ==="
+  infoActiveCooldowns: "<#BDB0D0>ᴀᴄᴛɪᴠᴇ ᴄᴏᴏʟᴅᴏᴡɴꜱ: <#B2FBA9>{count}"
+  infoCooldownDuration: "<#BDB0D0>ᴄᴏᴏʟᴅᴏᴡɴ ᴅᴜʀᴀᴛɪᴏɴ: <#B2FBA9>{duration} hours"
+  infoConfigValid: "<#BDB0D0>ᴄᴏɴꜰɪɢ ᴠᴀʟɪᴅ: <#B2FBA9>{valid}"
 
   # Time format suffixes
   hour: "<#A180D0>ʜ "

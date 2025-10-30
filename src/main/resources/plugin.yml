@@ -7,9 +7,6 @@ authors: [Loralon]
 description: 'Adds configurable cooldowns to raids with persistent storage and comprehensive management commands.'
 website: 'https://github.com/loralonMC/raidcooldown'
 
-# Soft dependencies for enhanced compatibility
-softdepend: [PlaceholderAPI]
-
 commands:
   raidcooldown:
     description: 'Manage raid cooldowns - check status, reset cooldowns, or reload config'

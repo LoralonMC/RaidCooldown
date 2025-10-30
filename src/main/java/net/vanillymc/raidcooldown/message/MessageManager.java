@@ -10,6 +10,22 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Handles all player messaging with MiniMessage formatting support.
+ * <p>
+ * Provides rich text formatting using the Adventure API and MiniMessage syntax.
+ * Features include:
+ * <ul>
+ *   <li>Color and formatting support via MiniMessage</li>
+ *   <li>Placeholder replacement for dynamic content</li>
+ *   <li>Human-readable duration formatting</li>
+ *   <li>Centralized message management</li>
+ * </ul>
+ * </p>
+ *
+ * @author Loralon
+ * @version 1.0.0
+ */
 public class MessageManager {
 
     private final ConfigManager configManager;
@@ -28,6 +44,11 @@ public class MessageManager {
     public static final String RAID_AVAILABLE_OTHER = "raidAvailableOtherMessage";
     public static final String COOLDOWN_RESET = "resetCooldownMessage";
     public static final String COOLDOWN_RESET_NOTIFICATION = "cooldownResetNotification";
+    public static final String RELOAD_ERROR = "reloadError";
+    public static final String INFO_HEADER = "infoHeader";
+    public static final String INFO_ACTIVE_COOLDOWNS = "infoActiveCooldowns";
+    public static final String INFO_COOLDOWN_DURATION = "infoCooldownDuration";
+    public static final String INFO_CONFIG_VALID = "infoConfigValid";
 
     // Time format keys
     private static final String HOUR_FORMAT = "hour";

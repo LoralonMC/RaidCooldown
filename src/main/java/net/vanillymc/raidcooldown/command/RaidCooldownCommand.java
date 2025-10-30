@@ -15,6 +15,23 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Command handler for the /raidcooldown command and its aliases.
+ * <p>
+ * Provides comprehensive raid cooldown management with subcommands:
+ * <ul>
+ *   <li>/raidcooldown - Check own cooldown status</li>
+ *   <li>/rc check &lt;player&gt; - Check another player's cooldown</li>
+ *   <li>/rc reset &lt;player&gt; - Reset a player's cooldown</li>
+ *   <li>/rc reload - Reload plugin configuration</li>
+ *   <li>/rc info - View plugin information and statistics</li>
+ * </ul>
+ * Includes intelligent tab completion based on permissions.
+ * </p>
+ *
+ * @author Loralon
+ * @version 1.0.0
+ */
 public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
 
     private final CooldownManager cooldownManager;
@@ -91,12 +108,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (sender instanceof Player) {
-            cooldownManager.sendCooldownStatus((Player) sender, target);
-        } else {
-            // Console check - send to console differently if needed
-            cooldownManager.sendCooldownStatus((Player) sender, target);
-        }
+        cooldownManager.sendCooldownStatus(sender, target);
 
         return true;
     }
@@ -136,7 +148,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
             configManager.reload();
             messageManager.sendMessage(sender, MessageManager.RELOAD_SUCCESS);
         } catch (Exception e) {
-            sender.sendMessage("§cError reloading configuration: " + e.getMessage());
+            messageManager.sendMessage(sender, MessageManager.RELOAD_ERROR, "error", e.getMessage());
         }
 
         return true;
@@ -151,11 +163,12 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
         // Show plugin information
         int activeCooldowns = cooldownManager.getActiveCooldownCount();
         long cooldownHours = configManager.getCooldownDuration().toHours();
+        boolean configValid = configManager.isValidConfig();
 
-        sender.sendMessage("§6=== RaidCooldown Info ===");
-        sender.sendMessage("§7Active cooldowns: §f" + activeCooldowns);
-        sender.sendMessage("§7Cooldown duration: §f" + cooldownHours + " hours");
-        sender.sendMessage("§7Config valid: §f" + configManager.isValidConfig());
+        messageManager.sendMessage(sender, MessageManager.INFO_HEADER);
+        messageManager.sendMessage(sender, MessageManager.INFO_ACTIVE_COOLDOWNS, "count", String.valueOf(activeCooldowns));
+        messageManager.sendMessage(sender, MessageManager.INFO_COOLDOWN_DURATION, "duration", String.valueOf(cooldownHours));
+        messageManager.sendMessage(sender, MessageManager.INFO_CONFIG_VALID, "valid", String.valueOf(configValid));
 
         return true;
     }
