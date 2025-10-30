@@ -7,6 +7,17 @@ import net.vanillymc.raidcooldown.listener.RaidListener;
 import net.vanillymc.raidcooldown.message.MessageManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * Main plugin class for RaidCooldown.
+ * <p>
+ * This plugin adds configurable cooldowns to Minecraft raids, preventing players from
+ * triggering raids too frequently. Features include persistent storage, automatic cleanup,
+ * comprehensive admin commands, and rich message formatting with MiniMessage support.
+ * </p>
+ *
+ * @author Loralon
+ * @version 1.0.0
+ */
 public class RaidCooldown extends JavaPlugin {
 
     private ConfigManager configManager;
@@ -54,8 +65,13 @@ public class RaidCooldown extends JavaPlugin {
                 cooldownManager, messageManager, configManager
         );
 
-        getCommand("raidcooldown").setExecutor(commandExecutor);
-        getCommand("raidcooldown").setTabCompleter(commandExecutor);
+        org.bukkit.command.PluginCommand command = getCommand("raidcooldown");
+        if (command == null) {
+            throw new IllegalStateException("Command 'raidcooldown' not found in plugin.yml!");
+        }
+
+        command.setExecutor(commandExecutor);
+        command.setTabCompleter(commandExecutor);
     }
 
     // Getters for other classes that might need access

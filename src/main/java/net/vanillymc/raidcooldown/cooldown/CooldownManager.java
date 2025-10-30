@@ -13,10 +13,27 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+/**
+ * Manages raid cooldowns for players with persistent storage and automatic cleanup.
+ * <p>
+ * This class handles all cooldown logic including:
+ * <ul>
+ *   <li>Checking if players can start raids</li>
+ *   <li>Setting cooldowns atomically to prevent race conditions</li>
+ *   <li>Persistent storage with batch saving for performance</li>
+ *   <li>Automatic cleanup of expired cooldowns</li>
+ *   <li>Thread-safe operations using ConcurrentHashMap</li>
+ * </ul>
+ * </p>
+ *
+ * @author Loralon
+ * @version 1.0.0
+ */
 public class CooldownManager {
 
     private final JavaPlugin plugin;
@@ -27,8 +44,12 @@ public class CooldownManager {
     // Use ConcurrentHashMap for thread safety
     private final Map<UUID, Instant> cooldowns;
 
+    // Track dirty cooldowns that need to be saved (for batch saving)
+    private final Set<UUID> dirtyCooldowns;
+
     // Cleanup task
     private BukkitRunnable cleanupTask;
+    private BukkitRunnable saveTask;
 
     public CooldownManager(JavaPlugin plugin, ConfigManager configManager, MessageManager messageManager) {
         this.plugin = plugin;
@@ -36,12 +57,22 @@ public class CooldownManager {
         this.messageManager = messageManager;
         this.logger = plugin.getLogger();
         this.cooldowns = new ConcurrentHashMap<>();
+        this.dirtyCooldowns = ConcurrentHashMap.newKeySet();
 
         loadCooldownData();
         startCleanupTask();
+        startPeriodicSaveTask();
     }
 
-    public boolean canStartRaid(Player player) {
+    /**
+     * Atomically checks if a player can start a raid and sets the cooldown if they can.
+     * This method is synchronized to prevent race conditions where multiple threads
+     * might try to start a raid for the same player simultaneously.
+     *
+     * @param player The player attempting to start a raid
+     * @return true if the raid was allowed and cooldown was set, false if on cooldown
+     */
+    public synchronized boolean canStartRaidAndSetCooldown(Player player) {
         // Check bypass permission first
         if (player.hasPermission("raidcooldown.bypass")) {
             return true;
@@ -51,22 +82,23 @@ public class CooldownManager {
         Duration remaining = getRemainingCooldown(playerId);
 
         if (remaining.isZero() || remaining.isNegative()) {
+            // Player can start raid, set cooldown immediately (atomic operation)
+            Instant cooldownEnd = Instant.now().plus(configManager.getCooldownDuration());
+            cooldowns.put(playerId, cooldownEnd);
+
+            // Mark as dirty for batch saving
+            dirtyCooldowns.add(playerId);
+
+            if (configManager.shouldLogCooldownActions()) {
+                logger.info("Set raid cooldown for " + player.getName() + " until " + cooldownEnd);
+            }
+
             return true;
         }
 
         // Send cooldown message to player
         messageManager.sendRaidBlockedMessage(player, remaining);
         return false;
-    }
-
-    public void setCooldown(Player player) {
-        UUID playerId = player.getUniqueId();
-        Instant cooldownEnd = Instant.now().plus(configManager.getCooldownDuration());
-
-        cooldowns.put(playerId, cooldownEnd);
-        saveCooldownData(playerId, cooldownEnd);
-
-        logger.info("Set raid cooldown for " + player.getName() + " until " + cooldownEnd);
     }
 
     public Duration getRemainingCooldown(UUID playerId) {
@@ -86,19 +118,18 @@ public class CooldownManager {
 
     public void removeCooldown(UUID playerId) {
         cooldowns.remove(playerId);
+        dirtyCooldowns.add(playerId); // Mark as dirty to ensure removal is saved
 
-        // Remove from persistent storage
-        configManager.getCooldownConfig().set(playerId.toString(), null);
-        configManager.saveCooldownConfig();
-
-        OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
-        logger.info("Removed raid cooldown for " + (player.getName() != null ? player.getName() : playerId));
+        if (configManager.shouldLogCooldownActions()) {
+            OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
+            logger.info("Removed raid cooldown for " + (player.getName() != null ? player.getName() : playerId));
+        }
     }
 
-    public void sendCooldownStatus(Player sender, Player target) {
+    public void sendCooldownStatus(org.bukkit.command.CommandSender sender, Player target) {
         UUID targetId = target.getUniqueId();
         Duration remaining = getRemainingCooldown(targetId);
-        boolean isSelfCheck = sender.equals(target);
+        boolean isSelfCheck = sender instanceof Player && sender.equals(target);
 
         if (remaining.isZero()) {
             String messageKey = isSelfCheck ?
@@ -144,13 +175,42 @@ public class CooldownManager {
         logger.info("Loaded " + loaded + " active cooldowns, cleaned up " + expired + " expired cooldowns");
     }
 
-    private void saveCooldownData(UUID playerId, Instant cooldownEnd) {
-        configManager.getCooldownConfig().set(playerId.toString(), cooldownEnd.getEpochSecond());
-        configManager.saveCooldownConfig();
+    /**
+     * Saves all dirty cooldowns to persistent storage in a batch operation.
+     * This is much more efficient than saving each cooldown individually.
+     */
+    private void saveDirtyCooldowns() {
+        if (dirtyCooldowns.isEmpty()) {
+            return;
+        }
+
+        // Create a copy to avoid concurrent modification
+        Set<UUID> toSave = Set.copyOf(dirtyCooldowns);
+        dirtyCooldowns.clear();
+
+        int saved = 0;
+        for (UUID playerId : toSave) {
+            Instant cooldownEnd = cooldowns.get(playerId);
+            if (cooldownEnd != null) {
+                configManager.getCooldownConfig().set(playerId.toString(), cooldownEnd.getEpochSecond());
+                saved++;
+            } else {
+                // Cooldown was removed, delete from config
+                configManager.getCooldownConfig().set(playerId.toString(), null);
+            }
+        }
+
+        // Save once for all changes
+        if (saved > 0 || toSave.size() > saved) {
+            configManager.saveCooldownConfig();
+            if (configManager.shouldLogCooldownActions() && saved > 0) {
+                logger.fine("Batch saved " + saved + " cooldowns");
+            }
+        }
     }
 
     private void startCleanupTask() {
-        // Clean up expired cooldowns every 10 minutes
+        // Clean up expired cooldowns periodically
         cleanupTask = new BukkitRunnable() {
             @Override
             public void run() {
@@ -158,8 +218,25 @@ public class CooldownManager {
             }
         };
 
-        // Run every 10 minutes (12000 ticks)
-        cleanupTask.runTaskTimerAsynchronously(plugin, 12000L, 12000L);
+        // Get cleanup interval from config (default 10 minutes = 12000 ticks)
+        long intervalTicks = configManager.getCleanupIntervalTicks();
+        if (intervalTicks > 0) {
+            // Run synchronously to ensure thread-safe config saves
+            cleanupTask.runTaskTimer(plugin, intervalTicks, intervalTicks);
+        }
+    }
+
+    private void startPeriodicSaveTask() {
+        // Save dirty cooldowns every 30 seconds to reduce disk I/O
+        saveTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                saveDirtyCooldowns();
+            }
+        };
+
+        // Run every 30 seconds (600 ticks)
+        saveTask.runTaskTimer(plugin, 600L, 600L);
     }
 
     private void cleanupExpiredCooldowns() {
@@ -171,16 +248,15 @@ public class CooldownManager {
             Map.Entry<UUID, Instant> entry = iterator.next();
             if (entry.getValue().isBefore(now)) {
                 iterator.remove();
-
-                // Also remove from persistent storage
-                configManager.getCooldownConfig().set(entry.getKey().toString(), null);
+                dirtyCooldowns.add(entry.getKey()); // Mark as dirty for batch deletion
                 cleaned++;
             }
         }
 
         if (cleaned > 0) {
-            configManager.saveCooldownConfig();
             logger.info("Cleaned up " + cleaned + " expired cooldowns");
+            // Save immediately after cleanup
+            saveDirtyCooldowns();
         }
     }
 
@@ -188,16 +264,13 @@ public class CooldownManager {
         if (cleanupTask != null) {
             cleanupTask.cancel();
         }
-
-        // Save all current cooldowns
-        saveAllCooldowns();
-        logger.info("CooldownManager shut down successfully");
-    }
-
-    private void saveAllCooldowns() {
-        for (Map.Entry<UUID, Instant> entry : cooldowns.entrySet()) {
-            saveCooldownData(entry.getKey(), entry.getValue());
+        if (saveTask != null) {
+            saveTask.cancel();
         }
+
+        // Save any remaining dirty cooldowns before shutdown
+        saveDirtyCooldowns();
+        logger.info("CooldownManager shut down successfully");
     }
 
     // Utility methods

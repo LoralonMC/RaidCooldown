@@ -9,6 +9,19 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.logging.Logger;
 
+/**
+ * Manages plugin configuration and cooldown data persistence.
+ * <p>
+ * Handles two configuration files:
+ * <ul>
+ *   <li>config.yml - Plugin settings and messages</li>
+ *   <li>cooldowns.yml - Persistent cooldown data storage</li>
+ * </ul>
+ * </p>
+ *
+ * @author Loralon
+ * @version 1.0.0
+ */
 public class ConfigManager {
 
     private final JavaPlugin plugin;
@@ -21,6 +34,10 @@ public class ConfigManager {
     // Config constants
     private static final String COOLDOWN_SECONDS_KEY = "raidCooldownSeconds";
     private static final int DEFAULT_COOLDOWN_SECONDS = 86400; // 24 hours
+    private static final String AUTO_CLEANUP_KEY = "settings.autoCleanup";
+    private static final String CLEANUP_INTERVAL_KEY = "settings.cleanupIntervalMinutes";
+    private static final String LOG_ACTIONS_KEY = "settings.logCooldownActions";
+    private static final int DEFAULT_CLEANUP_INTERVAL = 10; // 10 minutes
 
     public ConfigManager(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -106,5 +123,25 @@ public class ConfigManager {
     // Getters for specific config values with validation
     public int getCooldownSeconds() {
         return Math.max(0, config.getInt(COOLDOWN_SECONDS_KEY, DEFAULT_COOLDOWN_SECONDS));
+    }
+
+    public boolean isAutoCleanupEnabled() {
+        return config.getBoolean(AUTO_CLEANUP_KEY, true);
+    }
+
+    public int getCleanupIntervalMinutes() {
+        return Math.max(0, config.getInt(CLEANUP_INTERVAL_KEY, DEFAULT_CLEANUP_INTERVAL));
+    }
+
+    public long getCleanupIntervalTicks() {
+        if (!isAutoCleanupEnabled()) {
+            return 0; // Disabled
+        }
+        // Convert minutes to ticks (1 minute = 1200 ticks)
+        return getCleanupIntervalMinutes() * 1200L;
+    }
+
+    public boolean shouldLogCooldownActions() {
+        return config.getBoolean(LOG_ACTIONS_KEY, true);
     }
 }
