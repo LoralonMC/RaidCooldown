@@ -16,7 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  * </p>
  *
  * @author Loralon
- * @version 1.0.0
+ * @version 1.1.0
  */
 public class RaidCooldown extends JavaPlugin {
 
