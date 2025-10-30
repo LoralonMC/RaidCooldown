@@ -1,5 +1,5 @@
 # RaidCooldown Configuration
-# Plugin Version: 1.0.0
+# Plugin Version: 1.1.0
 
 # Raid cooldown duration in seconds (86400 = 24 hours)
 raidCooldownSeconds: 86400
