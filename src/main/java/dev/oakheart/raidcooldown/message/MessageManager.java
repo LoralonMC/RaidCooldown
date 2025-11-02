@@ -1,10 +1,11 @@
-package net.vanillymc.raidcooldown.message;
+package dev.oakheart.raidcooldown.message;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.vanillymc.raidcooldown.config.ConfigManager;
+import dev.oakheart.raidcooldown.config.ConfigManager;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -24,7 +25,7 @@ import java.util.Map;
  * </p>
  *
  * @author Loralon
- * @version 1.1.0
+ * @version 1.2.0
  */
 public class MessageManager {
 
@@ -55,38 +56,40 @@ public class MessageManager {
     private static final String MINUTE_FORMAT = "minute";
     private static final String SECOND_FORMAT = "second";
 
-    public MessageManager(ConfigManager configManager) {
+    public MessageManager(@NotNull ConfigManager configManager) {
         this.configManager = configManager;
         this.miniMessage = MiniMessage.miniMessage();
     }
 
-    public void sendMessage(CommandSender sender, String messageKey) {
+    public void sendMessage(@NotNull CommandSender sender, @NotNull String messageKey) {
         sendMessage(sender, messageKey, new HashMap<>());
     }
 
-    public void sendMessage(CommandSender sender, String messageKey, Map<String, String> placeholders) {
+    public void sendMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull Map<String, String> placeholders) {
         Component message = buildMessage(messageKey, placeholders);
         sender.sendMessage(message);
     }
 
-    public void sendMessage(CommandSender sender, String messageKey, String placeholder, String value) {
+    public void sendMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull String placeholder, @NotNull String value) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put(placeholder, value);
         sendMessage(sender, messageKey, placeholders);
     }
 
-    public Component buildMessage(String messageKey, Map<String, String> placeholders) {
+    @NotNull
+    public Component buildMessage(@NotNull String messageKey, @NotNull Map<String, String> placeholders) {
         String rawMessage = configManager.getMessage(messageKey);
 
-        // Replace placeholders
+        // Replace placeholders (%key% format)
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            rawMessage = rawMessage.replace("{" + entry.getKey() + "}", entry.getValue());
+            rawMessage = rawMessage.replace("%" + entry.getKey() + "%", entry.getValue());
         }
 
         return miniMessage.deserialize(rawMessage);
     }
 
-    public Component buildCooldownMessage(String messageKey, OfflinePlayer player, Duration remainingTime) {
+    @NotNull
+    public Component buildCooldownMessage(@NotNull String messageKey, @NotNull OfflinePlayer player, @NotNull Duration remainingTime) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("player", getPlayerName(player));
         placeholders.put("time", formatDuration(remainingTime));
@@ -94,18 +97,19 @@ public class MessageManager {
         return buildMessage(messageKey, placeholders);
     }
 
-    public void sendCooldownMessage(CommandSender sender, String messageKey, OfflinePlayer player, Duration remainingTime) {
+    public void sendCooldownMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull OfflinePlayer player, @NotNull Duration remainingTime) {
         Component message = buildCooldownMessage(messageKey, player, remainingTime);
         sender.sendMessage(message);
     }
 
-    public void sendRaidBlockedMessage(CommandSender sender, Duration remainingTime) {
+    public void sendRaidBlockedMessage(@NotNull CommandSender sender, @NotNull Duration remainingTime) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("time", formatDuration(remainingTime));
         sendMessage(sender, RAID_BLOCKED, placeholders);
     }
 
-    private String formatDuration(Duration duration) {
+    @NotNull
+    private String formatDuration(@NotNull Duration duration) {
         if (duration.isZero() || duration.isNegative()) {
             return "0" + configManager.getMessage(SECOND_FORMAT, "s");
         }
@@ -130,13 +134,15 @@ public class MessageManager {
         return result.toString().trim();
     }
 
-    private String getPlayerName(OfflinePlayer player) {
+    @NotNull
+    private String getPlayerName(@NotNull OfflinePlayer player) {
         String name = player.getName();
         return name != null ? name : "Unknown Player";
     }
 
     // Utility method for common message patterns
-    public Component formatPlayerMessage(String messageKey, OfflinePlayer player) {
+    @NotNull
+    public Component formatPlayerMessage(@NotNull String messageKey, @NotNull OfflinePlayer player) {
         Map<String, String> placeholders = new HashMap<>();
         placeholders.put("player", getPlayerName(player));
         return buildMessage(messageKey, placeholders);

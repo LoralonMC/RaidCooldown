@@ -10,6 +10,9 @@ out/
 # mpeltonen/sbt-idea plugin
 .idea_modules/
 
+# Claude Code
+.claude/
+
 # JIRA plugin
 atlassian-ide-plugin.xml
 

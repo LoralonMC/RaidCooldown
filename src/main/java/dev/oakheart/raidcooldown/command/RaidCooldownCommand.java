@@ -1,19 +1,18 @@
-package net.vanillymc.raidcooldown.command;
+package dev.oakheart.raidcooldown.command;
 
-import net.vanillymc.raidcooldown.config.ConfigManager;
-import net.vanillymc.raidcooldown.cooldown.CooldownManager;
-import net.vanillymc.raidcooldown.message.MessageManager;
+import dev.oakheart.raidcooldown.config.ConfigManager;
+import dev.oakheart.raidcooldown.cooldown.CooldownManager;
+import dev.oakheart.raidcooldown.message.MessageManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Command handler for the /raidcooldown command and its aliases.
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
  * </p>
  *
  * @author Loralon
- * @version 1.1.0
+ * @version 1.2.0
  */
 public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
 
@@ -57,7 +56,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         // No arguments - check own cooldown (players only)
         if (args.length == 0) {
             return handleSelfCheck(sender);
@@ -65,33 +64,29 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
 
         String subCommand = args[0].toLowerCase();
 
-        switch (subCommand) {
-            case CMD_CHECK:
-                return handleCheck(sender, args);
-            case CMD_RESET:
-                return handleReset(sender, args);
-            case CMD_RELOAD:
-                return handleReload(sender);
-            case CMD_INFO:
-                return handleInfo(sender);
-            default:
+        return switch (subCommand) {
+            case CMD_CHECK -> handleCheck(sender, args);
+            case CMD_RESET -> handleReset(sender, args);
+            case CMD_RELOAD -> handleReload(sender);
+            case CMD_INFO -> handleInfo(sender);
+            default -> {
                 messageManager.sendMessage(sender, MessageManager.USAGE);
-                return true;
-        }
+                yield true;
+            }
+        };
     }
 
-    private boolean handleSelfCheck(CommandSender sender) {
-        if (!(sender instanceof Player)) {
+    private boolean handleSelfCheck(@NotNull CommandSender sender) {
+        if (!(sender instanceof Player player)) {
             messageManager.sendMessage(sender, MessageManager.ONLY_PLAYERS);
             return true;
         }
 
-        Player player = (Player) sender;
         cooldownManager.sendCooldownStatus(player, player);
         return true;
     }
 
-    private boolean handleCheck(CommandSender sender, String[] args) {
+    private boolean handleCheck(@NotNull CommandSender sender, @NotNull String[] args) {
         if (!sender.hasPermission(PERM_CHECK)) {
             messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
             return true;
@@ -113,7 +108,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleReset(CommandSender sender, String[] args) {
+    private boolean handleReset(@NotNull CommandSender sender, @NotNull String[] args) {
         if (!sender.hasPermission(PERM_RESET)) {
             messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
             return true;
@@ -138,7 +133,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleReload(CommandSender sender) {
+    private boolean handleReload(@NotNull CommandSender sender) {
         if (!sender.hasPermission(PERM_RELOAD)) {
             messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
             return true;
@@ -154,7 +149,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private boolean handleInfo(CommandSender sender) {
+    private boolean handleInfo(@NotNull CommandSender sender) {
         if (!sender.hasPermission(PERM_INFO)) {
             messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
             return true;
@@ -174,7 +169,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
@@ -197,7 +192,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
             String input = args[0].toLowerCase();
             completions.addAll(subCommands.stream()
                     .filter(cmd -> cmd.startsWith(input))
-                    .collect(Collectors.toList()));
+                    .toList());
 
         } else if (args.length == 2) {
             // Second argument - player names for check/reset
@@ -209,7 +204,7 @@ public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
                 completions.addAll(Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName)
                         .filter(name -> name.toLowerCase().startsWith(input))
-                        .collect(Collectors.toList()));
+                        .toList());
             }
         }
 

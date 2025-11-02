@@ -1,10 +1,10 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'com.gradleup.shadow' version '9.0.0-beta4'
 }
 
-group = 'net.vanillymc'
-version = '1.1.0'
+group = 'dev.oakheart'
+version = '1.2.0'
 description = 'RaidCooldown'
 
 java {
@@ -25,6 +25,12 @@ repositories {
         name = 'sonatype'
         url = 'https://oss.sonatype.org/content/groups/public/'
     }
+
+    // bStats
+    maven {
+        name = 'CodeMC'
+        url = 'https://repo.codemc.org/repository/maven-public/'
+    }
 }
 
 dependencies {
@@ -34,6 +40,9 @@ dependencies {
     // Adventure (included in Paper, but explicit for clarity)
     compileOnly 'net.kyori:adventure-api:4.14.0'
     compileOnly 'net.kyori:adventure-text-minimessage:4.14.0'
+
+    // bStats
+    implementation 'org.bstats:bstats-bukkit:3.1.0'
 
     // Testing dependencies
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
@@ -51,7 +60,8 @@ shadowJar {
     archiveClassifier.set('')
     archiveFileName.set("${project.name}-${project.version}.jar")
 
-    // Relocate any dependencies if needed (none in this case)
+    // Relocate bStats to avoid conflicts with other plugins
+    relocate 'org.bstats', 'dev.oakheart.raidcooldown.bstats'
 }
 
 // Make build use shadowJar

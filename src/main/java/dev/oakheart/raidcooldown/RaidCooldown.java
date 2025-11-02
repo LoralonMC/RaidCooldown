@@ -1,11 +1,13 @@
-package net.vanillymc.raidcooldown;
+package dev.oakheart.raidcooldown;
 
-import net.vanillymc.raidcooldown.command.RaidCooldownCommand;
-import net.vanillymc.raidcooldown.config.ConfigManager;
-import net.vanillymc.raidcooldown.cooldown.CooldownManager;
-import net.vanillymc.raidcooldown.listener.RaidListener;
-import net.vanillymc.raidcooldown.message.MessageManager;
+import dev.oakheart.raidcooldown.command.RaidCooldownCommand;
+import dev.oakheart.raidcooldown.config.ConfigManager;
+import dev.oakheart.raidcooldown.cooldown.CooldownManager;
+import dev.oakheart.raidcooldown.listener.RaidListener;
+import dev.oakheart.raidcooldown.message.MessageManager;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Main plugin class for RaidCooldown.
@@ -16,7 +18,7 @@ import org.bukkit.plugin.java.JavaPlugin;
  * </p>
  *
  * @author Loralon
- * @version 1.1.0
+ * @version 1.2.0
  */
 public class RaidCooldown extends JavaPlugin {
 
@@ -30,6 +32,7 @@ public class RaidCooldown extends JavaPlugin {
             initializeComponents();
             registerListeners();
             registerCommands();
+            initializeMetrics();
 
             getLogger().info("RaidCooldown plugin has been enabled!");
         } catch (Exception e) {
@@ -74,15 +77,24 @@ public class RaidCooldown extends JavaPlugin {
         command.setTabCompleter(commandExecutor);
     }
 
+    private void initializeMetrics() {
+        // Initialize bStats metrics
+        int pluginId = 26656;
+        Metrics metrics = new Metrics(this, pluginId);
+    }
+
     // Getters for other classes that might need access
+    @NotNull
     public ConfigManager getConfigManager() {
         return configManager;
     }
 
+    @NotNull
     public MessageManager getMessageManager() {
         return messageManager;
     }
 
+    @NotNull
     public CooldownManager getCooldownManager() {
         return cooldownManager;
     }

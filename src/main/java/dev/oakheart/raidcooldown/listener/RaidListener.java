@@ -1,11 +1,12 @@
-package net.vanillymc.raidcooldown.listener;
+package dev.oakheart.raidcooldown.listener;
 
-import net.vanillymc.raidcooldown.cooldown.CooldownManager;
+import dev.oakheart.raidcooldown.cooldown.CooldownManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.raid.RaidTriggerEvent;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Listens for raid trigger events and enforces cooldowns.
@@ -16,18 +17,18 @@ import org.bukkit.event.raid.RaidTriggerEvent;
  * </p>
  *
  * @author Loralon
- * @version 1.1.0
+ * @version 1.2.0
  */
 public class RaidListener implements Listener {
 
     private final CooldownManager cooldownManager;
 
-    public RaidListener(CooldownManager cooldownManager) {
+    public RaidListener(@NotNull CooldownManager cooldownManager) {
         this.cooldownManager = cooldownManager;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onRaidTrigger(RaidTriggerEvent event) {
+    public void onRaidTrigger(@NotNull RaidTriggerEvent event) {
         Player player = event.getPlayer();
 
         if (player == null) {

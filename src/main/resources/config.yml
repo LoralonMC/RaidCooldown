@@ -1,5 +1,5 @@
 # RaidCooldown Configuration
-# Plugin Version: 1.1.0
+# Plugin Version: 1.2.0
 
 # Raid cooldown duration in seconds (86400 = 24 hours)
 raidCooldownSeconds: 86400
@@ -15,47 +15,34 @@ settings:
 
 # Customizable Messages
 # Supports MiniMessage formatting: https://docs.adventure.kyori.net/minimessage/format.html
+# Placeholders: %player%, %time%, %count%, %duration%, %error%, %valid%
 messages:
   # General messages
-  onlyPlayersMessage: "<#FBA9A9>ᴏɴʟʏ ᴘʟᴀʏᴇʀꜱ ᴄᴀɴ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ."
-  noPermissionMessage: "<#FBA9A9>ʏᴏᴜ ᴅᴏ ɴᴏᴛ ʜᴀᴠᴇ ᴘᴇʀᴍɪꜱꜱɪᴏɴ ᴛᴏ ᴜꜱᴇ ᴛʜɪꜱ ᴄᴏᴍᴍᴀɴᴅ."
-  playerNotFoundMessage: "<#FBA9A9>ᴘʟᴀʏᴇʀ <#A180D0>{player} <#FBA9A9>ɴᴏᴛ ꜰᴏᴜɴᴅ ᴏʀ ɪꜱ ᴏꜰꜰʟɪɴᴇ."
-  reloadMessage: "<#B2FBA9>ʀᴀɪᴅᴄᴏᴏʟᴅᴏᴡɴ ᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ ʀᴇʟᴏᴀᴅᴇᴅ ꜱᴜᴄᴄᴇꜱꜱꜰᴜʟʟʏ!"
-  usage: "<#FBA9A9>ᴜꜱᴀɢᴇ: <#A180D0>/ʀᴀɪᴅᴄᴏᴏʟᴅᴏᴡɴ [ᴄʜᴇᴄᴋ <ᴘʟᴀʏᴇʀ>] [ʀᴇꜱᴇᴛ <ᴘʟᴀʏᴇʀ>] [ʀᴇʟᴏᴀᴅ] [ɪɴꜰᴏ]"
+  onlyPlayersMessage: "<red>Only players can use this command."
+  noPermissionMessage: "<red>You do not have permission to use this command."
+  playerNotFoundMessage: "<red>Player <yellow>%player%</yellow> not found or is offline."
+  reloadMessage: "<green>RaidCooldown configuration reloaded successfully!"
+  usage: "<red>Usage: <yellow>/raidcooldown [check <player>] [reset <player>] [reload] [info]"
 
   # Raid cooldown messages
-  raidCooldownMessage: "<#FBA9A9>ʏᴏᴜ ᴀʀᴇ ᴏɴ ᴄᴏᴏʟᴅᴏᴡɴ ꜰᴏʀ ꜱᴛᴀʀᴛɪɴɢ ᴀ ʀᴀɪᴅ. ᴘʟᴇᴀꜱᴇ ᴡᴀɪᴛ <#A180D0>{time}<#FBA9A9>."
-  cooldownRemainingMessage: "<#BDB0D0>ʏᴏᴜ ᴍᴜꜱᴛ ᴡᴀɪᴛ <#A180D0>{time} <#BDB0D0>ʙᴇꜰᴏʀᴇ ꜱᴛᴀʀᴛɪɴɢ ᴀɴᴏᴛʜᴇʀ ʀᴀɪᴅ."
-  cooldownRemainingOtherMessage: "<#A180D0>{player} <#BDB0D0>ᴍᴜꜱᴛ ᴡᴀɪᴛ <#A180D0>{time} <#BDB0D0>ʙᴇꜰᴏʀᴇ ᴛʜᴇʏ ᴄᴀɴ ꜱᴛᴀʀᴛ ᴀɴᴏᴛʜᴇʀ ʀᴀɪᴅ."
-  raidAvailableMessage: "<#B2FBA9>ʏᴏᴜ ᴄᴀɴ ꜱᴛᴀʀᴛ ᴀ ʀᴀɪᴅ ɴᴏᴡ!"
-  raidAvailableOtherMessage: "<#B2FBA9>{player} ᴄᴀɴ ꜱᴛᴀʀᴛ ᴀ ʀᴀɪᴅ ɴᴏᴡ!"
+  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow>%time%</yellow>."
+  cooldownRemainingMessage: "<gray>You must wait <yellow>%time%</yellow> before starting another raid."
+  cooldownRemainingOtherMessage: "<yellow>%player%</yellow> <gray>must wait <yellow>%time%</yellow> before they can start another raid."
+  raidAvailableMessage: "<green>You can start a raid now!"
+  raidAvailableOtherMessage: "<green>%player% can start a raid now!"
 
   # Admin messages
-  resetCooldownMessage: "<#B2FBA9>ʀᴀɪᴅ ᴄᴏᴏʟᴅᴏᴡɴ ꜰᴏʀ <#A180D0>{player} <#B2FBA9>ʜᴀꜱ ʙᴇᴇɴ ʀᴇꜱᴇᴛ."
-  cooldownResetNotification: "<#B2FBA9>ʏᴏᴜʀ ʀᴀɪᴅ ᴄᴏᴏʟᴅᴏᴡɴ ʜᴀꜱ ʙᴇᴇɴ ʀᴇꜱᴇᴛ ʙʏ ᴀɴ ᴀᴅᴍɪɴɪꜱᴛʀᴀᴛᴏʀ."
-  reloadError: "<#FBA9A9>ᴇʀʀᴏʀ ʀᴇʟᴏᴀᴅɪɴɢ ᴄᴏɴꜰɪɢᴜʀᴀᴛɪᴏɴ: <#A180D0>{error}"
+  resetCooldownMessage: "<green>Raid cooldown for <yellow>%player%</yellow> has been reset."
+  cooldownResetNotification: "<green>Your raid cooldown has been reset by an administrator."
+  reloadError: "<red>Error reloading configuration: <yellow>%error%"
 
   # Info command messages
-  infoHeader: "<#A180D0>=== ʀᴀɪᴅᴄᴏᴏʟᴅᴏᴡɴ ɪɴꜰᴏ ==="
-  infoActiveCooldowns: "<#BDB0D0>ᴀᴄᴛɪᴠᴇ ᴄᴏᴏʟᴅᴏᴡɴꜱ: <#B2FBA9>{count}"
-  infoCooldownDuration: "<#BDB0D0>ᴄᴏᴏʟᴅᴏᴡɴ ᴅᴜʀᴀᴛɪᴏɴ: <#B2FBA9>{duration} hours"
-  infoConfigValid: "<#BDB0D0>ᴄᴏɴꜰɪɢ ᴠᴀʟɪᴅ: <#B2FBA9>{valid}"
+  infoHeader: "<gold>===== RaidCooldown Info ====="
+  infoActiveCooldowns: "<gray>Active cooldowns: <green>%count%"
+  infoCooldownDuration: "<gray>Cooldown duration: <green>%duration% hours"
+  infoConfigValid: "<gray>Config valid: <green>%valid%"
 
   # Time format suffixes
-  hour: "<#A180D0>ʜ "
-  minute: "<#A180D0>ᴍ "
-  second: "<#A180D0>ꜱ"
-
-# Example alternative color schemes (comment out current messages and uncomment one of these)
-#
-# # Dark/Gothic Theme
-# messages:
-#   raidCooldownMessage: "<dark_gray>⚔</dark_gray> <gray>Raid cooldown active. Wait </gray><red>{time}</red><gray>.</gray>"
-#   cooldownRemainingMessage: "<gray>Cooldown: </gray><red>{time}</red>"
-#   raidAvailableMessage: "<dark_gray>⚔</dark_gray> <green>Raid available!</green>"
-#
-# # Bright/Colorful Theme
-# messages:
-#   raidCooldownMessage: "<rainbow>🛡️ Raid Cooldown Active! 🛡️</rainbow> <yellow>Wait </yellow><aqua>{time}</aqua>"
-#   cooldownRemainingMessage: "<light_purple>✨ Cooldown: </light_purple><gold>{time}</gold>"
-#   raidAvailableMessage: "<rainbow>🎉 Ready to Raid! 🎉</rainbow>"
+  hour: "h "
+  minute: "m "
+  second: "s"

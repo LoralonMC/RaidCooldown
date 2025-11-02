@@ -1,12 +1,13 @@
-package net.vanillymc.raidcooldown.cooldown;
+package dev.oakheart.raidcooldown.cooldown;
 
-import net.vanillymc.raidcooldown.config.ConfigManager;
-import net.vanillymc.raidcooldown.message.MessageManager;
+import dev.oakheart.raidcooldown.config.ConfigManager;
+import dev.oakheart.raidcooldown.message.MessageManager;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
 import java.time.Duration;
@@ -32,7 +33,7 @@ import java.util.logging.Logger;
  * </p>
  *
  * @author Loralon
- * @version 1.1.0
+ * @version 1.2.0
  */
 public class CooldownManager {
 
@@ -51,7 +52,7 @@ public class CooldownManager {
     private BukkitRunnable cleanupTask;
     private BukkitRunnable saveTask;
 
-    public CooldownManager(JavaPlugin plugin, ConfigManager configManager, MessageManager messageManager) {
+    public CooldownManager(@NotNull JavaPlugin plugin, @NotNull ConfigManager configManager, @NotNull MessageManager messageManager) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
@@ -72,7 +73,7 @@ public class CooldownManager {
      * @param player The player attempting to start a raid
      * @return true if the raid was allowed and cooldown was set, false if on cooldown
      */
-    public synchronized boolean canStartRaidAndSetCooldown(Player player) {
+    public synchronized boolean canStartRaidAndSetCooldown(@NotNull Player player) {
         // Check bypass permission first
         if (player.hasPermission("raidcooldown.bypass")) {
             return true;
@@ -101,7 +102,8 @@ public class CooldownManager {
         return false;
     }
 
-    public Duration getRemainingCooldown(UUID playerId) {
+    @NotNull
+    public Duration getRemainingCooldown(@NotNull UUID playerId) {
         Instant cooldownEnd = cooldowns.get(playerId);
 
         if (cooldownEnd == null) {
@@ -112,11 +114,11 @@ public class CooldownManager {
         return remaining.isNegative() ? Duration.ZERO : remaining;
     }
 
-    public boolean hasCooldown(UUID playerId) {
+    public boolean hasCooldown(@NotNull UUID playerId) {
         return !getRemainingCooldown(playerId).isZero();
     }
 
-    public void removeCooldown(UUID playerId) {
+    public void removeCooldown(@NotNull UUID playerId) {
         cooldowns.remove(playerId);
         dirtyCooldowns.add(playerId); // Mark as dirty to ensure removal is saved
 
@@ -126,7 +128,7 @@ public class CooldownManager {
         }
     }
 
-    public void sendCooldownStatus(org.bukkit.command.CommandSender sender, Player target) {
+    public void sendCooldownStatus(@NotNull org.bukkit.command.CommandSender sender, @NotNull Player target) {
         UUID targetId = target.getUniqueId();
         Duration remaining = getRemainingCooldown(targetId);
         boolean isSelfCheck = sender instanceof Player && sender.equals(target);
@@ -278,6 +280,7 @@ public class CooldownManager {
         return cooldowns.size();
     }
 
+    @NotNull
     public Map<UUID, Duration> getAllActiveCooldowns() {
         Map<UUID, Duration> result = new HashMap<>();
         Instant now = Instant.now();

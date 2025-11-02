@@ -86,22 +86,26 @@ The plugin supports full MiniMessage formatting for rich text, colors, and forma
 
 ```yaml
 messages:
-  raidCooldownMessage: "<#FBA9A9>You are on cooldown for starting a raid. Please wait <#A180D0>{time}<#FBA9A9>."
-  raidAvailableMessage: "<#B2FBA9>You can start a raid now!"
+  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow>%time%</yellow>."
+  raidAvailableMessage: "<green>You can start a raid now!"
   # ... more messages
 ```
 
 #### Placeholders
 
-- `{player}` - Player name
-- `{time}` - Formatted time remaining
+- `%player%` - Player name
+- `%time%` - Formatted time remaining
+- `%count%` - Number of active cooldowns
+- `%duration%` - Cooldown duration
+- `%error%` - Error message
+- `%valid%` - Config validation status
 
-#### Color Themes
-
-The plugin includes example color themes in the config:
-- Default: Purple/pink theme
-- Dark/Gothic: Gray and red theme
-- Bright/Colorful: Rainbow and vibrant colors
+**MiniMessage Formatting Examples:**
+- `<red>Red text</red>` - Basic colors
+- `<#FF5555>Hex colors</#FF5555>` - Custom hex colors
+- `<bold>Bold text</bold>` - Text formatting
+- `<gradient:red:blue>Gradient</gradient>` - Color gradients
+- See full documentation: https://docs.adventure.kyori.net/minimessage/format.html
 
 ## Installation
 
@@ -125,13 +129,17 @@ cd RaidCooldown
 ./gradlew build
 ```
 
-The compiled plugin will be in `build/libs/RaidCooldown-1.1.0.jar`
+The compiled plugin will be in `build/libs/RaidCooldown-1.2.0.jar`
 
 ## API Usage
 
 Other plugins can interact with RaidCooldown:
 
 ```java
+import dev.oakheart.raidcooldown.RaidCooldown;
+import dev.oakheart.raidcooldown.cooldown.CooldownManager;
+import java.time.Duration;
+
 // Get the plugin instance
 RaidCooldown plugin = (RaidCooldown) Bukkit.getPluginManager().getPlugin("RaidCooldown");
 
@@ -173,6 +181,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Questions**: [GitHub Discussions](https://github.com/LoralonMC/RaidCooldown/discussions)
 
 ## Changelog
+
+### Version 1.2.0
+
+**New Features:**
+- Added bStats integration for anonymous usage statistics (plugin ID: 26656)
+- Added config value caching for improved performance
+- Added comprehensive config validation on load with warnings for invalid settings
+
+**Breaking Changes:**
+- Changed placeholder format from `{key}` to `%key%` for consistency with other Bukkit plugins
+- If you have custom messages, update `{player}` to `%player%` and `{time}` to `%time%`
+- Simplified default config messages to use standard text instead of Unicode fancy text
+- Old configs will continue to work, but new installs get cleaner defaults
+
+**Refactoring:**
+- Refactored package structure from `net.vanillymc` to `dev.oakheart`
+- Modernized codebase with Java 21 features (pattern matching, enhanced switch, stream improvements)
+- Added `@NotNull` and `@Nullable` annotations for better null safety
+- Improved code quality and removed unused imports
+
+**Documentation:**
+- Updated API examples with correct package imports
+- Improved JavaDoc coverage across all classes
+- Updated placeholder documentation with all available placeholders
 
 ### Version 1.1.0
 

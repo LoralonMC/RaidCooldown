@@ -1,6 +1,6 @@
 name: RaidCooldown
-version: '1.1.0'
-main: net.vanillymc.raidcooldown.RaidCooldown
+version: '${version}'
+main: dev.oakheart.raidcooldown.RaidCooldown
 api-version: '1.21'
 prefix: RaidCooldown >
 authors: [Loralon]
