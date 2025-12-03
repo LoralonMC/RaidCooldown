@@ -11,6 +11,10 @@ import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -33,7 +37,7 @@ import java.util.logging.Logger;
  * </p>
  *
  * @author Loralon
- * @version 1.2.0
+ * @version 1.3.0
  */
 public class CooldownManager {
 
@@ -84,7 +88,7 @@ public class CooldownManager {
 
         if (remaining.isZero() || remaining.isNegative()) {
             // Player can start raid, set cooldown immediately (atomic operation)
-            Instant cooldownEnd = Instant.now().plus(configManager.getCooldownDuration());
+            Instant cooldownEnd = calculateCooldownEnd();
             cooldowns.put(playerId, cooldownEnd);
 
             // Mark as dirty for batch saving
@@ -100,6 +104,44 @@ public class CooldownManager {
         // Send cooldown message to player
         messageManager.sendRaidBlockedMessage(player, remaining);
         return false;
+    }
+
+    /**
+     * Calculates when a cooldown should end based on configuration.
+     * If synchronized reset is enabled, returns the next occurrence of the reset time.
+     * Otherwise, returns now + cooldown duration.
+     *
+     * @return The instant when the cooldown will expire
+     */
+    @NotNull
+    private Instant calculateCooldownEnd() {
+        if (configManager.isSynchronizedResetEnabled()) {
+            return calculateNextResetTime();
+        }
+        return Instant.now().plus(configManager.getCooldownDuration());
+    }
+
+    /**
+     * Calculates the next occurrence of the configured reset time.
+     * If the reset time has already passed today, returns tomorrow's reset time.
+     *
+     * @return The instant of the next reset time
+     */
+    @NotNull
+    private Instant calculateNextResetTime() {
+        LocalTime resetTime = configManager.getResetTime();
+        ZoneId serverZone = ZoneId.systemDefault();
+        ZonedDateTime now = ZonedDateTime.now(serverZone);
+
+        // Create today's reset time
+        ZonedDateTime todayReset = now.toLocalDate().atTime(resetTime).atZone(serverZone);
+
+        // If reset time has passed today (or is exactly now), use tomorrow
+        if (!now.isBefore(todayReset)) {
+            todayReset = todayReset.plusDays(1);
+        }
+
+        return todayReset.toInstant();
     }
 
     @NotNull

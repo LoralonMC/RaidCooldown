@@ -8,6 +8,9 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -23,7 +26,7 @@ import java.util.logging.Logger;
  * </p>
  *
  * @author Loralon
- * @version 1.2.0
+ * @version 1.3.0
  */
 public class ConfigManager {
 
@@ -39,6 +42,9 @@ public class ConfigManager {
     private boolean cachedAutoCleanup;
     private int cachedCleanupIntervalMinutes;
     private boolean cachedLogActions;
+    private boolean cachedSynchronizedResetEnabled;
+    private LocalTime cachedResetTime;
+    private String cachedPlaceholderReadyMessage;
 
     // Config constants
     private static final String COOLDOWN_SECONDS_KEY = "raidCooldownSeconds";
@@ -47,6 +53,11 @@ public class ConfigManager {
     private static final String CLEANUP_INTERVAL_KEY = "settings.cleanupIntervalMinutes";
     private static final String LOG_ACTIONS_KEY = "settings.logCooldownActions";
     private static final int DEFAULT_CLEANUP_INTERVAL = 10; // 10 minutes
+    private static final String SYNCHRONIZED_RESET_ENABLED_KEY = "synchronizedReset.enabled";
+    private static final String SYNCHRONIZED_RESET_TIME_KEY = "synchronizedReset.resetTime";
+    private static final LocalTime DEFAULT_RESET_TIME = LocalTime.MIDNIGHT;
+    private static final String PLACEHOLDER_READY_MESSAGE_KEY = "placeholderapi.readyMessage";
+    private static final String DEFAULT_READY_MESSAGE = "Ready";
 
     // Required message keys for validation
     private static final String[] REQUIRED_MESSAGE_KEYS = {
@@ -95,6 +106,22 @@ public class ConfigManager {
         this.cachedAutoCleanup = config.getBoolean(AUTO_CLEANUP_KEY, true);
         this.cachedCleanupIntervalMinutes = Math.max(0, config.getInt(CLEANUP_INTERVAL_KEY, DEFAULT_CLEANUP_INTERVAL));
         this.cachedLogActions = config.getBoolean(LOG_ACTIONS_KEY, true);
+        this.cachedSynchronizedResetEnabled = config.getBoolean(SYNCHRONIZED_RESET_ENABLED_KEY, false);
+        this.cachedResetTime = parseResetTime(config.getString(SYNCHRONIZED_RESET_TIME_KEY, "00:00"));
+        this.cachedPlaceholderReadyMessage = config.getString(PLACEHOLDER_READY_MESSAGE_KEY, DEFAULT_READY_MESSAGE);
+    }
+
+    private LocalTime parseResetTime(String timeString) {
+        if (timeString == null || timeString.isBlank()) {
+            return DEFAULT_RESET_TIME;
+        }
+
+        try {
+            return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("H:mm"));
+        } catch (DateTimeParseException e) {
+            logger.warning("Invalid reset time format '" + timeString + "', using default (00:00)");
+            return DEFAULT_RESET_TIME;
+        }
     }
 
     private void validateConfig() {
@@ -130,6 +157,17 @@ public class ConfigManager {
 
         if (!missingMessages.isEmpty()) {
             warnings.add("Missing message keys: " + String.join(", ", missingMessages));
+        }
+
+        // Validate synchronized reset settings
+        if (cachedSynchronizedResetEnabled) {
+            String resetTimeStr = config.getString(SYNCHRONIZED_RESET_TIME_KEY, "00:00");
+            try {
+                LocalTime.parse(resetTimeStr, DateTimeFormatter.ofPattern("H:mm"));
+                logger.info("Synchronized reset enabled - cooldowns will reset daily at " + cachedResetTime);
+            } catch (DateTimeParseException e) {
+                warnings.add("Invalid reset time format '" + resetTimeStr + "' - using default (00:00)");
+            }
         }
 
         // Log all warnings
@@ -242,5 +280,19 @@ public class ConfigManager {
 
     public boolean shouldLogCooldownActions() {
         return cachedLogActions;
+    }
+
+    public boolean isSynchronizedResetEnabled() {
+        return cachedSynchronizedResetEnabled;
+    }
+
+    @NotNull
+    public LocalTime getResetTime() {
+        return cachedResetTime;
+    }
+
+    @NotNull
+    public String getPlaceholderReadyMessage() {
+        return cachedPlaceholderReadyMessage;
     }
 }

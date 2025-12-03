@@ -1,5 +1,5 @@
 # RaidCooldown Configuration
-# Plugin Version: 1.2.0
+# Plugin Version: 1.3.0
 
 # Raid cooldown duration in seconds (86400 = 24 hours)
 raidCooldownSeconds: 86400
@@ -12,6 +12,27 @@ settings:
   cleanupIntervalMinutes: 10
   # Whether to log cooldown actions to console
   logCooldownActions: true
+
+# Synchronized Reset Settings
+# When enabled, all cooldowns reset at a fixed time each day instead of
+# being relative to when each player triggered their raid.
+# Example: If resetTime is "00:00", all cooldowns expire at midnight server time.
+synchronizedReset:
+  # Set to true to enable synchronized daily reset
+  enabled: false
+  # Time of day when all cooldowns reset (24-hour format, HH:mm)
+  # Examples: "00:00" (midnight), "06:00" (6 AM), "18:30" (6:30 PM)
+  resetTime: "00:00"
+
+# PlaceholderAPI Settings
+# Requires PlaceholderAPI plugin to be installed
+# Available placeholders:
+#   %raidcooldown_time%    - Formatted time remaining (e.g., "2h 30m 15s") or ready message
+#   %raidcooldown_ready%   - "true" if player can raid, "false" if on cooldown
+#   %raidcooldown_seconds% - Raw seconds remaining (0 if ready)
+placeholderapi:
+  # Message shown when player has no cooldown (for %raidcooldown_time%)
+  readyMessage: "Ready"
 
 # Customizable Messages
 # Supports MiniMessage formatting: https://docs.adventure.kyori.net/minimessage/format.html

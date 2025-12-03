@@ -29,7 +29,7 @@ import java.util.List;
  * </p>
  *
  * @author Loralon
- * @version 1.2.0
+ * @version 1.3.0
  */
 public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
 

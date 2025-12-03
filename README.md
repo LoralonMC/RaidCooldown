@@ -17,6 +17,7 @@ A comprehensive Minecraft Paper plugin that adds configurable cooldowns to raids
 - **Automatic Cleanup**: Removes expired cooldowns to prevent memory bloat
 - **Comprehensive Commands**: Check, reset, and manage cooldowns easily
 - **Console Support**: All commands work from server console
+- **PlaceholderAPI Support**: Display cooldown status in scoreboards, holograms, tab lists, etc.
 - **Thread Safe**: Uses concurrent data structures and atomic operations for reliability
 - **Paper 1.21+ Compatible**: Built specifically for modern Paper servers
 
@@ -74,6 +75,43 @@ settings:
 
 **Performance Note**: The plugin uses batch saving (every 30 seconds) to minimize disk I/O. All cooldowns are saved automatically on server shutdown.
 
+### Synchronized Reset
+
+Instead of cooldowns being relative to when each player triggered a raid, you can configure all cooldowns to reset at a fixed time each day:
+
+```yaml
+synchronizedReset:
+  # Set to true to enable synchronized daily reset
+  enabled: true
+  # Time of day when all cooldowns reset (24-hour format, HH:mm)
+  resetTime: "00:00"
+```
+
+**Example**: If `resetTime` is `"00:00"` (midnight):
+- Player raids at 3:00 PM → cooldown expires at midnight (9 hours)
+- Player raids at 11:00 PM → cooldown expires at midnight (1 hour)
+
+This creates a more predictable experience where all players know exactly when they can raid again.
+
+**Note**: When synchronized reset is enabled, the `raidCooldownSeconds` setting is ignored for cooldown calculation.
+
+### PlaceholderAPI Integration
+
+If you have [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) installed, you can use these placeholders:
+
+| Placeholder | Description | Example Output |
+|-------------|-------------|----------------|
+| `%raidcooldown_time%` | Formatted time remaining or ready message | `2h 30m 15s` or `Ready` |
+| `%raidcooldown_ready%` | Whether player can start a raid | `true` or `false` |
+| `%raidcooldown_seconds%` | Raw seconds remaining | `9015` or `0` |
+
+Configure the "ready" message in config.yml:
+
+```yaml
+placeholderapi:
+  readyMessage: "Ready"
+```
+
 ### Time Format Examples
 - `3600` = 1 hour
 - `86400` = 24 hours (default)
@@ -129,7 +167,7 @@ cd RaidCooldown
 ./gradlew build
 ```
 
-The compiled plugin will be in `build/libs/RaidCooldown-1.2.0.jar`
+The compiled plugin will be in `build/libs/RaidCooldown-1.3.0.jar`
 
 ## API Usage
 
@@ -181,6 +219,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Questions**: [GitHub Discussions](https://github.com/LoralonMC/RaidCooldown/discussions)
 
 ## Changelog
+
+### Version 1.3.0
+
+**New Features:**
+- Added synchronized reset option - all cooldowns can now reset at a fixed time each day (e.g., midnight) instead of being relative to when each player raided
+- New config section `synchronizedReset` with `enabled` and `resetTime` options
+- Added PlaceholderAPI integration with three placeholders:
+  - `%raidcooldown_time%` - Formatted remaining time or configurable ready message
+  - `%raidcooldown_ready%` - Boolean indicating if player can raid
+  - `%raidcooldown_seconds%` - Raw seconds remaining
+
+**Configuration:**
+- When `synchronizedReset.enabled` is `true`, the `raidCooldownSeconds` setting is ignored
+- Reset time uses 24-hour format (e.g., "00:00" for midnight, "18:30" for 6:30 PM)
+- New `placeholderapi.readyMessage` option to customize the "ready" message
 
 ### Version 1.2.0
 

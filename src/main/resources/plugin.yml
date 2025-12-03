@@ -6,6 +6,7 @@ prefix: RaidCooldown >
 authors: [Loralon]
 description: 'Adds configurable cooldowns to raids with persistent storage and comprehensive management commands.'
 website: 'https://github.com/loralonMC/raidcooldown'
+softdepend: [PlaceholderAPI]
 
 commands:
   raidcooldown:

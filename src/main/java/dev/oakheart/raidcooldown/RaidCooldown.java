@@ -5,7 +5,9 @@ import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
 import dev.oakheart.raidcooldown.listener.RaidListener;
 import dev.oakheart.raidcooldown.message.MessageManager;
+import dev.oakheart.raidcooldown.placeholder.RaidCooldownExpansion;
 import org.bstats.bukkit.Metrics;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,7 +20,7 @@ import org.jetbrains.annotations.NotNull;
  * </p>
  *
  * @author Loralon
- * @version 1.2.0
+ * @version 1.3.0
  */
 public class RaidCooldown extends JavaPlugin {
 
@@ -33,6 +35,7 @@ public class RaidCooldown extends JavaPlugin {
             registerListeners();
             registerCommands();
             initializeMetrics();
+            registerPlaceholders();
 
             getLogger().info("RaidCooldown plugin has been enabled!");
         } catch (Exception e) {
@@ -81,6 +84,13 @@ public class RaidCooldown extends JavaPlugin {
         // Initialize bStats metrics
         int pluginId = 26656;
         Metrics metrics = new Metrics(this, pluginId);
+    }
+
+    private void registerPlaceholders() {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new RaidCooldownExpansion(this).register();
+            getLogger().info("PlaceholderAPI integration enabled!");
+        }
     }
 
     // Getters for other classes that might need access
