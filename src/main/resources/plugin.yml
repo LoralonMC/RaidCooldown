@@ -1,23 +1,6 @@
-name: RaidCooldown
-version: '${version}'
-main: dev.oakheart.raidcooldown.RaidCooldown
-api-version: '1.21'
-prefix: RaidCooldown >
-authors: [Loralon]
-description: 'Adds configurable cooldowns to raids with persistent storage and comprehensive management commands.'
-website: 'https://github.com/loralonMC/raidcooldown'
-softdepend: [PlaceholderAPI]
-
-commands:
-  raidcooldown:
-    description: 'Manage raid cooldowns - check status, reset cooldowns, or reload config'
-    usage: '/<command> [check <player>] [reset <player>] [reload] [info]'
-    aliases: [rc, raidcd]
-    permission-message: '&cYou do not have permission to use this command.'
-
 permissions:
   raidcooldown.*:
-    description: 'Grants access to all RaidCooldown commands'
+    description: 'Grants all RaidCooldown permissions'
     default: op
     children:
       raidcooldown.check: true

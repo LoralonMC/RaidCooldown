@@ -1,213 +1,138 @@
 package dev.oakheart.raidcooldown.command;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.tree.LiteralCommandNode;
+import dev.oakheart.raidcooldown.RaidCooldown;
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
 import dev.oakheart.raidcooldown.message.MessageManager;
-import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
+import io.papermc.paper.command.brigadier.Commands;
+import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
+import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
+import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.plugin.Plugin;
 
-import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Command handler for the /raidcooldown command and its aliases.
- * <p>
- * Provides comprehensive raid cooldown management with subcommands:
- * <ul>
- *   <li>/raidcooldown - Check own cooldown status</li>
- *   <li>/rc check &lt;player&gt; - Check another player's cooldown</li>
- *   <li>/rc reset &lt;player&gt; - Reset a player's cooldown</li>
- *   <li>/rc reload - Reload plugin configuration</li>
- *   <li>/rc info - View plugin information and statistics</li>
- * </ul>
- * Includes intelligent tab completion based on permissions.
- * </p>
- *
- * @author Loralon
- * @version 1.3.0
- */
-public class RaidCooldownCommand implements CommandExecutor, TabCompleter {
+@SuppressWarnings("UnstableApiUsage")
+public class RaidCooldownCommand {
 
+    private final RaidCooldown plugin;
     private final CooldownManager cooldownManager;
     private final MessageManager messageManager;
     private final ConfigManager configManager;
 
-    // Permission constants
-    private static final String PERM_CHECK = "raidcooldown.check";
-    private static final String PERM_RESET = "raidcooldown.reset";
-    private static final String PERM_RELOAD = "raidcooldown.reload";
-    private static final String PERM_INFO = "raidcooldown.info";
-
-    // Subcommands
-    private static final String CMD_CHECK = "check";
-    private static final String CMD_RESET = "reset";
-    private static final String CMD_RELOAD = "reload";
-    private static final String CMD_INFO = "info";
-
-    public RaidCooldownCommand(CooldownManager cooldownManager, MessageManager messageManager, ConfigManager configManager) {
+    public RaidCooldownCommand(RaidCooldown plugin, CooldownManager cooldownManager,
+                               MessageManager messageManager, ConfigManager configManager) {
+        this.plugin = plugin;
         this.cooldownManager = cooldownManager;
         this.messageManager = messageManager;
         this.configManager = configManager;
     }
 
-    @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        // No arguments - check own cooldown (players only)
-        if (args.length == 0) {
-            return handleSelfCheck(sender);
-        }
-
-        String subCommand = args[0].toLowerCase();
-
-        return switch (subCommand) {
-            case CMD_CHECK -> handleCheck(sender, args);
-            case CMD_RESET -> handleReset(sender, args);
-            case CMD_RELOAD -> handleReload(sender);
-            case CMD_INFO -> handleInfo(sender);
-            default -> {
-                messageManager.sendMessage(sender, MessageManager.USAGE);
-                yield true;
-            }
-        };
+    public void register() {
+        LifecycleEventManager<Plugin> manager = plugin.getLifecycleManager();
+        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            Commands commands = event.registrar();
+            commands.register(buildCommand(), "Manage raid cooldowns", List.of("rc", "raidcd"));
+        });
     }
 
-    private boolean handleSelfCheck(@NotNull CommandSender sender) {
-        if (!(sender instanceof Player player)) {
-            messageManager.sendMessage(sender, MessageManager.ONLY_PLAYERS);
-            return true;
-        }
+    private LiteralCommandNode<CommandSourceStack> buildCommand() {
+        return Commands.literal("raidcooldown")
+                // Base command - self check (player only)
+                .executes(ctx -> {
+                    CommandSender sender = ctx.getSource().getSender();
+                    if (!(sender instanceof Player player)) {
+                        messageManager.sendMessage(sender, MessageManager.ONLY_PLAYERS);
+                        return Command.SINGLE_SUCCESS;
+                    }
+                    cooldownManager.sendCooldownStatus(player, player);
+                    return Command.SINGLE_SUCCESS;
+                })
+                // check <player>
+                .then(Commands.literal("check")
+                        .requires(src -> src.getSender().hasPermission("raidcooldown.check"))
+                        .then(Commands.argument("player", ArgumentTypes.player())
+                                .executes(ctx -> {
+                                    CommandSender sender = ctx.getSource().getSender();
+                                    PlayerSelectorArgumentResolver resolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                                    List<Player> players = resolver.resolve(ctx.getSource());
 
-        cooldownManager.sendCooldownStatus(player, player);
-        return true;
-    }
+                                    if (players.isEmpty()) {
+                                        messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND,
+                                                Placeholder.unparsed("player", "unknown"));
+                                        return Command.SINGLE_SUCCESS;
+                                    }
 
-    private boolean handleCheck(@NotNull CommandSender sender, @NotNull String[] args) {
-        if (!sender.hasPermission(PERM_CHECK)) {
-            messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
-            return true;
-        }
+                                    Player target = players.getFirst();
+                                    cooldownManager.sendCooldownStatus(sender, target);
+                                    return Command.SINGLE_SUCCESS;
+                                })))
+                // reset <player>
+                .then(Commands.literal("reset")
+                        .requires(src -> src.getSender().hasPermission("raidcooldown.reset"))
+                        .then(Commands.argument("player", ArgumentTypes.player())
+                                .executes(ctx -> {
+                                    CommandSender sender = ctx.getSource().getSender();
+                                    PlayerSelectorArgumentResolver resolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
+                                    List<Player> players = resolver.resolve(ctx.getSource());
 
-        if (args.length < 2) {
-            messageManager.sendMessage(sender, MessageManager.USAGE);
-            return true;
-        }
+                                    if (players.isEmpty()) {
+                                        messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND,
+                                                Placeholder.unparsed("player", "unknown"));
+                                        return Command.SINGLE_SUCCESS;
+                                    }
 
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
-            messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND, "player", args[1]);
-            return true;
-        }
+                                    Player target = players.getFirst();
+                                    cooldownManager.removeCooldown(target.getUniqueId());
+                                    messageManager.sendMessage(sender, MessageManager.COOLDOWN_RESET,
+                                            Placeholder.unparsed("player", target.getName()));
+                                    messageManager.sendMessage(target, MessageManager.COOLDOWN_RESET_NOTIFICATION);
+                                    return Command.SINGLE_SUCCESS;
+                                })))
+                // reload
+                .then(Commands.literal("reload")
+                        .requires(src -> src.getSender().hasPermission("raidcooldown.reload"))
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            try {
+                                if (configManager.reload()) {
+                                    cooldownManager.restartTasks();
+                                    messageManager.sendMessage(sender, MessageManager.RELOAD_SUCCESS);
+                                } else {
+                                    messageManager.sendMessage(sender, MessageManager.RELOAD_ERROR,
+                                            Placeholder.unparsed("error", "Configuration validation failed"));
+                                }
+                            } catch (Exception e) {
+                                messageManager.sendMessage(sender, MessageManager.RELOAD_ERROR,
+                                        Placeholder.unparsed("error", e.getMessage()));
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        }))
+                // info
+                .then(Commands.literal("info")
+                        .requires(src -> src.getSender().hasPermission("raidcooldown.info"))
+                        .executes(ctx -> {
+                            CommandSender sender = ctx.getSource().getSender();
+                            int activeCooldowns = cooldownManager.getActiveCooldownCount();
+                            long cooldownHours = configManager.getCooldownDuration().toHours();
+                            boolean configValid = configManager.isValidConfig();
 
-        cooldownManager.sendCooldownStatus(sender, target);
-
-        return true;
-    }
-
-    private boolean handleReset(@NotNull CommandSender sender, @NotNull String[] args) {
-        if (!sender.hasPermission(PERM_RESET)) {
-            messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
-            return true;
-        }
-
-        if (args.length < 2) {
-            messageManager.sendMessage(sender, MessageManager.USAGE);
-            return true;
-        }
-
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
-            messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND, "player", args[1]);
-            return true;
-        }
-
-        cooldownManager.removeCooldown(target.getUniqueId());
-
-        messageManager.sendMessage(sender, MessageManager.COOLDOWN_RESET, "player", target.getName());
-        messageManager.sendMessage(target, MessageManager.COOLDOWN_RESET_NOTIFICATION);
-
-        return true;
-    }
-
-    private boolean handleReload(@NotNull CommandSender sender) {
-        if (!sender.hasPermission(PERM_RELOAD)) {
-            messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
-            return true;
-        }
-
-        try {
-            configManager.reload();
-            messageManager.sendMessage(sender, MessageManager.RELOAD_SUCCESS);
-        } catch (Exception e) {
-            messageManager.sendMessage(sender, MessageManager.RELOAD_ERROR, "error", e.getMessage());
-        }
-
-        return true;
-    }
-
-    private boolean handleInfo(@NotNull CommandSender sender) {
-        if (!sender.hasPermission(PERM_INFO)) {
-            messageManager.sendMessage(sender, MessageManager.NO_PERMISSION);
-            return true;
-        }
-
-        // Show plugin information
-        int activeCooldowns = cooldownManager.getActiveCooldownCount();
-        long cooldownHours = configManager.getCooldownDuration().toHours();
-        boolean configValid = configManager.isValidConfig();
-
-        messageManager.sendMessage(sender, MessageManager.INFO_HEADER);
-        messageManager.sendMessage(sender, MessageManager.INFO_ACTIVE_COOLDOWNS, "count", String.valueOf(activeCooldowns));
-        messageManager.sendMessage(sender, MessageManager.INFO_COOLDOWN_DURATION, "duration", String.valueOf(cooldownHours));
-        messageManager.sendMessage(sender, MessageManager.INFO_CONFIG_VALID, "valid", String.valueOf(configValid));
-
-        return true;
-    }
-
-    @Override
-    public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
-        List<String> completions = new ArrayList<>();
-
-        if (args.length == 1) {
-            // First argument - subcommands
-            List<String> subCommands = new ArrayList<>();
-
-            if (sender.hasPermission(PERM_CHECK)) {
-                subCommands.add(CMD_CHECK);
-            }
-            if (sender.hasPermission(PERM_RESET)) {
-                subCommands.add(CMD_RESET);
-            }
-            if (sender.hasPermission(PERM_RELOAD)) {
-                subCommands.add(CMD_RELOAD);
-            }
-            if (sender.hasPermission(PERM_INFO)) {
-                subCommands.add(CMD_INFO);
-            }
-
-            String input = args[0].toLowerCase();
-            completions.addAll(subCommands.stream()
-                    .filter(cmd -> cmd.startsWith(input))
-                    .toList());
-
-        } else if (args.length == 2) {
-            // Second argument - player names for check/reset
-            String subCommand = args[0].toLowerCase();
-            if ((CMD_CHECK.equals(subCommand) && sender.hasPermission(PERM_CHECK)) ||
-                    (CMD_RESET.equals(subCommand) && sender.hasPermission(PERM_RESET))) {
-
-                String input = args[1].toLowerCase();
-                completions.addAll(Bukkit.getOnlinePlayers().stream()
-                        .map(Player::getName)
-                        .filter(name -> name.toLowerCase().startsWith(input))
-                        .toList());
-            }
-        }
-
-        return completions;
+                            messageManager.sendMessage(sender, MessageManager.INFO_HEADER);
+                            messageManager.sendMessage(sender, MessageManager.INFO_ACTIVE_COOLDOWNS,
+                                    Placeholder.unparsed("count", String.valueOf(activeCooldowns)));
+                            messageManager.sendMessage(sender, MessageManager.INFO_COOLDOWN_DURATION,
+                                    Placeholder.unparsed("duration", String.valueOf(cooldownHours)));
+                            messageManager.sendMessage(sender, MessageManager.INFO_CONFIG_VALID,
+                                    Placeholder.unparsed("valid", String.valueOf(configValid)));
+                            return Command.SINGLE_SUCCESS;
+                        }))
+                .build();
     }
 }

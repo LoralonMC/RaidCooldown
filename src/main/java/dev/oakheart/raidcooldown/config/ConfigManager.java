@@ -1,18 +1,20 @@
 package dev.oakheart.raidcooldown.config;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
+import dev.oakheart.raidcooldown.RaidCooldown;
 import org.jetbrains.annotations.NotNull;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -23,19 +25,15 @@ import java.util.logging.Logger;
  *   <li>config.yml - Plugin settings and messages</li>
  *   <li>cooldowns.yml - Persistent cooldown data storage</li>
  * </ul>
- * </p>
- *
- * @author Loralon
- * @version 1.3.0
  */
 public class ConfigManager {
 
-    private final JavaPlugin plugin;
+    private final RaidCooldown plugin;
     private final Logger logger;
-
-    private FileConfiguration config;
-    private File cooldownFile;
-    private FileConfiguration cooldownConfig;
+    private final YamlConfigurationLoader loader;
+    private final YamlConfigurationLoader cooldownLoader;
+    private ConfigurationNode config;
+    private ConfigurationNode cooldownConfig;
 
     // Cached config values for performance
     private Duration cachedCooldownDuration;
@@ -47,16 +45,9 @@ public class ConfigManager {
     private String cachedPlaceholderReadyMessage;
 
     // Config constants
-    private static final String COOLDOWN_SECONDS_KEY = "raidCooldownSeconds";
     private static final int DEFAULT_COOLDOWN_SECONDS = 86400; // 24 hours
-    private static final String AUTO_CLEANUP_KEY = "settings.autoCleanup";
-    private static final String CLEANUP_INTERVAL_KEY = "settings.cleanupIntervalMinutes";
-    private static final String LOG_ACTIONS_KEY = "settings.logCooldownActions";
     private static final int DEFAULT_CLEANUP_INTERVAL = 10; // 10 minutes
-    private static final String SYNCHRONIZED_RESET_ENABLED_KEY = "synchronizedReset.enabled";
-    private static final String SYNCHRONIZED_RESET_TIME_KEY = "synchronizedReset.resetTime";
     private static final LocalTime DEFAULT_RESET_TIME = LocalTime.MIDNIGHT;
-    private static final String PLACEHOLDER_READY_MESSAGE_KEY = "placeholderapi.readyMessage";
     private static final String DEFAULT_READY_MESSAGE = "Ready";
 
     // Required message keys for validation
@@ -80,35 +71,62 @@ public class ConfigManager {
         "infoConfigValid"
     };
 
-    public ConfigManager(@NotNull JavaPlugin plugin) {
+    public ConfigManager(@NotNull RaidCooldown plugin) {
         this.plugin = plugin;
         this.logger = plugin.getLogger();
-
-        initialize();
-        validateConfig();
+        Path dataFolder = plugin.getDataFolder().toPath();
+        this.loader = YamlConfigurationLoader.builder()
+                .path(dataFolder.resolve("config.yml"))
+                .build();
+        this.cooldownLoader = YamlConfigurationLoader.builder()
+                .path(dataFolder.resolve("cooldowns.yml"))
+                .build();
     }
 
-    private void initialize() {
-        // Save default config if it doesn't exist
-        plugin.saveDefaultConfig();
-        this.config = plugin.getConfig();
+    /**
+     * Initial load of configuration. Called once during onEnable.
+     */
+    public void load() {
+        try {
+            Path configPath = plugin.getDataFolder().toPath().resolve("config.yml");
+            if (!Files.exists(configPath)) {
+                plugin.saveResource("config.yml", false);
+            }
 
-        // Set up cooldown data file
-        setupCooldownFile();
+            config = loader.load();
+            mergeDefaults();
+            validateConfig(config);
+            cacheConfigValues();
 
-        // Cache config values
-        cacheConfigValues();
+            // Set up cooldown data file
+            setupCooldownFile();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load configuration", e);
+        }
+    }
+
+    /**
+     * Merges default config values from the JAR resource into the user's config
+     * without overwriting existing values.
+     */
+    private void mergeDefaults() throws IOException {
+        YamlConfigurationLoader defaultLoader = YamlConfigurationLoader.builder()
+                .url(getClass().getResource("/config.yml"))
+                .build();
+        ConfigurationNode defaults = defaultLoader.load();
+        config.mergeFrom(defaults);
+        loader.save(config);
     }
 
     private void cacheConfigValues() {
-        int seconds = config.getInt(COOLDOWN_SECONDS_KEY, DEFAULT_COOLDOWN_SECONDS);
+        int seconds = config.node("raidCooldownSeconds").getInt(DEFAULT_COOLDOWN_SECONDS);
         this.cachedCooldownDuration = Duration.ofSeconds(Math.max(0, seconds));
-        this.cachedAutoCleanup = config.getBoolean(AUTO_CLEANUP_KEY, true);
-        this.cachedCleanupIntervalMinutes = Math.max(0, config.getInt(CLEANUP_INTERVAL_KEY, DEFAULT_CLEANUP_INTERVAL));
-        this.cachedLogActions = config.getBoolean(LOG_ACTIONS_KEY, true);
-        this.cachedSynchronizedResetEnabled = config.getBoolean(SYNCHRONIZED_RESET_ENABLED_KEY, false);
-        this.cachedResetTime = parseResetTime(config.getString(SYNCHRONIZED_RESET_TIME_KEY, "00:00"));
-        this.cachedPlaceholderReadyMessage = config.getString(PLACEHOLDER_READY_MESSAGE_KEY, DEFAULT_READY_MESSAGE);
+        this.cachedAutoCleanup = config.node("settings", "autoCleanup").getBoolean(true);
+        this.cachedCleanupIntervalMinutes = Math.max(0, config.node("settings", "cleanupIntervalMinutes").getInt(DEFAULT_CLEANUP_INTERVAL));
+        this.cachedLogActions = config.node("settings", "logCooldownActions").getBoolean(true);
+        this.cachedSynchronizedResetEnabled = config.node("synchronizedReset", "enabled").getBoolean(false);
+        this.cachedResetTime = parseResetTime(config.node("synchronizedReset", "resetTime").getString("00:00"));
+        this.cachedPlaceholderReadyMessage = config.node("placeholderapi", "readyMessage").getString(DEFAULT_READY_MESSAGE);
     }
 
     private LocalTime parseResetTime(String timeString) {
@@ -124,21 +142,22 @@ public class ConfigManager {
         }
     }
 
-    private void validateConfig() {
+    private boolean validateConfig(ConfigurationNode configToValidate) {
         List<String> warnings = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
 
         // Validate cooldown duration
-        int cooldownSeconds = config.getInt(COOLDOWN_SECONDS_KEY, -1);
+        int cooldownSeconds = configToValidate.node("raidCooldownSeconds").getInt(-1);
         if (cooldownSeconds == -1) {
             warnings.add("Missing 'raidCooldownSeconds' - using default: " + DEFAULT_COOLDOWN_SECONDS);
         } else if (cooldownSeconds < 0) {
-            warnings.add("Invalid 'raidCooldownSeconds' (negative value) - using 0");
+            errors.add("Invalid 'raidCooldownSeconds': " + cooldownSeconds + " (must be non-negative)");
         } else if (cooldownSeconds > 604800) { // 7 days
             warnings.add("'raidCooldownSeconds' is very high (" + cooldownSeconds + "s = " + (cooldownSeconds / 86400) + " days)");
         }
 
         // Validate cleanup interval
-        int cleanupInterval = config.getInt(CLEANUP_INTERVAL_KEY, -1);
+        int cleanupInterval = configToValidate.node("settings", "cleanupIntervalMinutes").getInt(-1);
         if (cleanupInterval < 0) {
             warnings.add("Invalid 'cleanupIntervalMinutes' (negative value) - using default: " + DEFAULT_CLEANUP_INTERVAL);
         } else if (cleanupInterval == 0) {
@@ -149,8 +168,9 @@ public class ConfigManager {
 
         // Validate required messages
         List<String> missingMessages = new ArrayList<>();
+        ConfigurationNode messagesNode = configToValidate.node("messages");
         for (String key : REQUIRED_MESSAGE_KEYS) {
-            if (!config.contains("messages." + key)) {
+            if (messagesNode.node(key).virtual()) {
                 missingMessages.add(key);
             }
         }
@@ -160,59 +180,76 @@ public class ConfigManager {
         }
 
         // Validate synchronized reset settings
-        if (cachedSynchronizedResetEnabled) {
-            String resetTimeStr = config.getString(SYNCHRONIZED_RESET_TIME_KEY, "00:00");
+        if (configToValidate.node("synchronizedReset", "enabled").getBoolean(false)) {
+            String resetTimeStr = configToValidate.node("synchronizedReset", "resetTime").getString("00:00");
             try {
-                LocalTime.parse(resetTimeStr, DateTimeFormatter.ofPattern("H:mm"));
-                logger.info("Synchronized reset enabled - cooldowns will reset daily at " + cachedResetTime);
+                LocalTime parsed = LocalTime.parse(resetTimeStr, DateTimeFormatter.ofPattern("H:mm"));
+                logger.info("Synchronized reset enabled - cooldowns will reset daily at " + parsed);
             } catch (DateTimeParseException e) {
                 warnings.add("Invalid reset time format '" + resetTimeStr + "' - using default (00:00)");
             }
         }
 
-        // Log all warnings
+        // Log errors
+        if (!errors.isEmpty()) {
+            logger.severe("=== Configuration Errors ===");
+            for (String error : errors) {
+                logger.severe("  - " + error);
+            }
+            logger.severe("============================");
+        }
+
+        // Log warnings
         if (!warnings.isEmpty()) {
             logger.warning("=== Configuration Validation Warnings ===");
             for (String warning : warnings) {
                 logger.warning("  - " + warning);
             }
             logger.warning("=========================================");
-        } else {
+        }
+
+        if (errors.isEmpty() && warnings.isEmpty()) {
             logger.info("Configuration validated successfully");
         }
+
+        return errors.isEmpty();
     }
 
-    private void setupCooldownFile() {
-        cooldownFile = new File(plugin.getDataFolder(), "cooldowns.yml");
-
-        if (!cooldownFile.exists()) {
-            try {
-                if (!cooldownFile.getParentFile().exists()) {
-                    cooldownFile.getParentFile().mkdirs();
-                }
-                cooldownFile.createNewFile();
-                logger.info("Created new cooldowns.yml file");
-            } catch (IOException e) {
-                logger.severe("Could not create cooldowns.yml file: " + e.getMessage());
-                throw new RuntimeException("Failed to create cooldown file", e);
-            }
+    private void setupCooldownFile() throws IOException {
+        Path cooldownPath = plugin.getDataFolder().toPath().resolve("cooldowns.yml");
+        if (!Files.exists(cooldownPath)) {
+            Files.createDirectories(cooldownPath.getParent());
+            Files.createFile(cooldownPath);
+            logger.info("Created new cooldowns.yml file");
         }
 
-        this.cooldownConfig = YamlConfiguration.loadConfiguration(cooldownFile);
+        this.cooldownConfig = cooldownLoader.load();
     }
 
-    public void reload() {
-        plugin.reloadConfig();
-        this.config = plugin.getConfig();
-        this.cooldownConfig = YamlConfiguration.loadConfiguration(cooldownFile);
+    /**
+     * Reloads configuration from disk. Validates before applying.
+     *
+     * @return true if reload was successful
+     */
+    public boolean reload() {
+        try {
+            ConfigurationNode newConfig = loader.load();
 
-        // Re-cache config values after reload
-        cacheConfigValues();
+            if (!validateConfig(newConfig)) {
+                logger.warning("Configuration reload failed validation. Keeping previous configuration.");
+                return false;
+            }
 
-        // Re-validate after reload
-        validateConfig();
+            this.config = newConfig;
+            this.cooldownConfig = cooldownLoader.load();
+            cacheConfigValues();
 
-        logger.info("Configuration reloaded successfully");
+            logger.info("Configuration reloaded successfully.");
+            return true;
+        } catch (IOException e) {
+            logger.warning("Failed to reload configuration: " + e.getMessage());
+            return false;
+        }
     }
 
     // Main config getters (using cached values for performance)
@@ -223,38 +260,41 @@ public class ConfigManager {
 
     @NotNull
     public String getMessage(@NotNull String key) {
-        return config.getString("messages." + key, "Message not found: " + key);
+        return config.node("messages", key).getString("Message not found: " + key);
     }
 
     @NotNull
     public String getMessage(@NotNull String key, @NotNull String defaultValue) {
-        return config.getString("messages." + key, defaultValue);
+        return config.node("messages", key).getString(defaultValue);
     }
 
     // Cooldown data file operations
     @NotNull
-    public FileConfiguration getCooldownConfig() {
+    public ConfigurationNode getCooldownConfig() {
         return cooldownConfig;
     }
 
     public void saveCooldownConfig() {
         try {
-            cooldownConfig.save(cooldownFile);
+            cooldownLoader.save(cooldownConfig);
         } catch (IOException e) {
             logger.severe("Could not save cooldown data: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
     public void reloadCooldownConfig() {
-        this.cooldownConfig = YamlConfiguration.loadConfiguration(cooldownFile);
+        try {
+            this.cooldownConfig = cooldownLoader.load();
+        } catch (IOException e) {
+            logger.warning("Failed to reload cooldown data: " + e.getMessage());
+        }
     }
 
     // Validation methods
     public boolean isValidConfig() {
-        return config.contains(COOLDOWN_SECONDS_KEY) &&
-                config.contains("messages") &&
-                cachedCooldownDuration.getSeconds() >= 0;
+        return config != null &&
+                !config.node("raidCooldownSeconds").virtual() &&
+                !config.node("messages").virtual();
     }
 
     // Getters for specific config values (using cached values)

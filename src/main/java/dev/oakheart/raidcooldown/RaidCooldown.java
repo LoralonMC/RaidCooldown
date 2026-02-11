@@ -3,13 +3,15 @@ package dev.oakheart.raidcooldown;
 import dev.oakheart.raidcooldown.command.RaidCooldownCommand;
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
-import dev.oakheart.raidcooldown.listener.RaidListener;
+import dev.oakheart.raidcooldown.listeners.RaidListener;
 import dev.oakheart.raidcooldown.message.MessageManager;
 import dev.oakheart.raidcooldown.placeholder.RaidCooldownExpansion;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.logging.Level;
 
 /**
  * Main plugin class for RaidCooldown.
@@ -39,8 +41,7 @@ public class RaidCooldown extends JavaPlugin {
 
             getLogger().info("RaidCooldown plugin has been enabled!");
         } catch (Exception e) {
-            getLogger().severe("Failed to enable RaidCooldown plugin: " + e.getMessage());
-            e.printStackTrace();
+            getLogger().log(Level.SEVERE, "Failed to enable RaidCooldown", e);
             getServer().getPluginManager().disablePlugin(this);
         }
     }
@@ -56,6 +57,7 @@ public class RaidCooldown extends JavaPlugin {
     private void initializeComponents() {
         // Initialize in dependency order
         this.configManager = new ConfigManager(this);
+        configManager.load();
         this.messageManager = new MessageManager(configManager);
         this.cooldownManager = new CooldownManager(this, configManager, messageManager);
     }
@@ -67,23 +69,13 @@ public class RaidCooldown extends JavaPlugin {
     }
 
     private void registerCommands() {
-        RaidCooldownCommand commandExecutor = new RaidCooldownCommand(
-                cooldownManager, messageManager, configManager
-        );
-
-        org.bukkit.command.PluginCommand command = getCommand("raidcooldown");
-        if (command == null) {
-            throw new IllegalStateException("Command 'raidcooldown' not found in plugin.yml!");
-        }
-
-        command.setExecutor(commandExecutor);
-        command.setTabCompleter(commandExecutor);
+        new RaidCooldownCommand(this, cooldownManager, messageManager, configManager).register();
     }
 
     private void initializeMetrics() {
         // Initialize bStats metrics
         int pluginId = 26656;
-        Metrics metrics = new Metrics(this, pluginId);
+        new Metrics(this, pluginId);
     }
 
     private void registerPlaceholders() {

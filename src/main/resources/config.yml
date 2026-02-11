@@ -1,5 +1,4 @@
 # RaidCooldown Configuration
-# Plugin Version: 1.3.0
 
 # Raid cooldown duration in seconds (86400 = 24 hours)
 raidCooldownSeconds: 86400
@@ -19,7 +18,7 @@ settings:
 # Example: If resetTime is "00:00", all cooldowns expire at midnight server time.
 synchronizedReset:
   # Set to true to enable synchronized daily reset
-  enabled: false
+  enabled: true
   # Time of day when all cooldowns reset (24-hour format, HH:mm)
   # Examples: "00:00" (midnight), "06:00" (6 AM), "18:30" (6:30 PM)
   resetTime: "00:00"
@@ -36,32 +35,32 @@ placeholderapi:
 
 # Customizable Messages
 # Supports MiniMessage formatting: https://docs.adventure.kyori.net/minimessage/format.html
-# Placeholders: %player%, %time%, %count%, %duration%, %error%, %valid%
+# Placeholders: <player>, <time>, <count>, <duration>, <error>, <valid>
 messages:
   # General messages
   onlyPlayersMessage: "<red>Only players can use this command."
   noPermissionMessage: "<red>You do not have permission to use this command."
-  playerNotFoundMessage: "<red>Player <yellow>%player%</yellow> not found or is offline."
+  playerNotFoundMessage: "<red>Player <yellow><player></yellow> not found or is offline."
   reloadMessage: "<green>RaidCooldown configuration reloaded successfully!"
   usage: "<red>Usage: <yellow>/raidcooldown [check <player>] [reset <player>] [reload] [info]"
 
   # Raid cooldown messages
-  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow>%time%</yellow>."
-  cooldownRemainingMessage: "<gray>You must wait <yellow>%time%</yellow> before starting another raid."
-  cooldownRemainingOtherMessage: "<yellow>%player%</yellow> <gray>must wait <yellow>%time%</yellow> before they can start another raid."
+  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow><time></yellow>."
+  cooldownRemainingMessage: "<gray>You must wait <yellow><time></yellow> before starting another raid."
+  cooldownRemainingOtherMessage: "<yellow><player></yellow> <gray>must wait <yellow><time></yellow> before they can start another raid."
   raidAvailableMessage: "<green>You can start a raid now!"
-  raidAvailableOtherMessage: "<green>%player% can start a raid now!"
+  raidAvailableOtherMessage: "<green><player> can start a raid now!"
 
   # Admin messages
-  resetCooldownMessage: "<green>Raid cooldown for <yellow>%player%</yellow> has been reset."
+  resetCooldownMessage: "<green>Raid cooldown for <yellow><player></yellow> has been reset."
   cooldownResetNotification: "<green>Your raid cooldown has been reset by an administrator."
-  reloadError: "<red>Error reloading configuration: <yellow>%error%"
+  reloadError: "<red>Error reloading configuration: <yellow><error>"
 
   # Info command messages
   infoHeader: "<gold>===== RaidCooldown Info ====="
-  infoActiveCooldowns: "<gray>Active cooldowns: <green>%count%"
-  infoCooldownDuration: "<gray>Cooldown duration: <green>%duration% hours"
-  infoConfigValid: "<gray>Config valid: <green>%valid%"
+  infoActiveCooldowns: "<gray>Active cooldowns: <green><count>"
+  infoCooldownDuration: "<gray>Cooldown duration: <green><duration> hours"
+  infoConfigValid: "<gray>Config valid: <green><valid>"
 
   # Time format suffixes
   hour: "h "

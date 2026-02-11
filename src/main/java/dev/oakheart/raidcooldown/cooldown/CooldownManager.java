@@ -2,20 +2,22 @@ package dev.oakheart.raidcooldown.cooldown;
 
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.message.MessageManager;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
+import org.spongepowered.configurate.ConfigurationNode;
 
 import java.time.Instant;
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
@@ -34,10 +36,6 @@ import java.util.logging.Logger;
  *   <li>Automatic cleanup of expired cooldowns</li>
  *   <li>Thread-safe operations using ConcurrentHashMap</li>
  * </ul>
- * </p>
- *
- * @author Loralon
- * @version 1.3.0
  */
 public class CooldownManager {
 
@@ -179,7 +177,8 @@ public class CooldownManager {
             String messageKey = isSelfCheck ?
                     MessageManager.RAID_AVAILABLE_SELF :
                     MessageManager.RAID_AVAILABLE_OTHER;
-            messageManager.sendMessage(sender, messageKey, "player", target.getName());
+            messageManager.sendMessage(sender, messageKey,
+                    Placeholder.unparsed("player", target.getName()));
         } else {
             String messageKey = isSelfCheck ?
                     MessageManager.COOLDOWN_REMAINING_SELF :
@@ -192,11 +191,13 @@ public class CooldownManager {
         int loaded = 0;
         int expired = 0;
         Instant now = Instant.now();
+        ConfigurationNode cooldownNode = configManager.getCooldownConfig();
 
-        for (String key : configManager.getCooldownConfig().getKeys(false)) {
+        for (Map.Entry<Object, ? extends ConfigurationNode> entry : cooldownNode.childrenMap().entrySet()) {
+            String key = entry.getKey().toString();
             try {
                 UUID playerId = UUID.fromString(key);
-                long epochSeconds = configManager.getCooldownConfig().getLong(key);
+                long epochSeconds = entry.getValue().getLong(0);
                 Instant cooldownEnd = Instant.ofEpochSecond(epochSeconds);
 
                 if (cooldownEnd.isAfter(now)) {
@@ -204,7 +205,11 @@ public class CooldownManager {
                     loaded++;
                 } else {
                     // Remove expired cooldown from config
-                    configManager.getCooldownConfig().set(key, null);
+                    try {
+                        cooldownNode.removeChild(key);
+                    } catch (Exception e) {
+                        logger.warning("Failed to remove expired cooldown for " + key);
+                    }
                     expired++;
                 }
             } catch (IllegalArgumentException e) {
@@ -228,19 +233,24 @@ public class CooldownManager {
             return;
         }
 
-        // Create a copy to avoid concurrent modification
-        Set<UUID> toSave = Set.copyOf(dirtyCooldowns);
-        dirtyCooldowns.clear();
+        // Drain atomically per-element to avoid losing concurrent additions
+        Set<UUID> toSave = new HashSet<>();
+        dirtyCooldowns.removeIf(toSave::add);
 
+        ConfigurationNode cooldownNode = configManager.getCooldownConfig();
         int saved = 0;
         for (UUID playerId : toSave) {
             Instant cooldownEnd = cooldowns.get(playerId);
-            if (cooldownEnd != null) {
-                configManager.getCooldownConfig().set(playerId.toString(), cooldownEnd.getEpochSecond());
-                saved++;
-            } else {
-                // Cooldown was removed, delete from config
-                configManager.getCooldownConfig().set(playerId.toString(), null);
+            try {
+                if (cooldownEnd != null) {
+                    cooldownNode.node(playerId.toString()).set(cooldownEnd.getEpochSecond());
+                    saved++;
+                } else {
+                    // Cooldown was removed, delete from config
+                    cooldownNode.removeChild(playerId.toString());
+                }
+            } catch (Exception e) {
+                logger.warning("Failed to save cooldown for " + playerId + ": " + e.getMessage());
             }
         }
 
@@ -317,9 +327,32 @@ public class CooldownManager {
         logger.info("CooldownManager shut down successfully");
     }
 
+    /**
+     * Restarts scheduled tasks with current configuration values.
+     * Called after a successful config reload.
+     */
+    public void restartTasks() {
+        if (cleanupTask != null) {
+            cleanupTask.cancel();
+        }
+        if (saveTask != null) {
+            saveTask.cancel();
+        }
+        startCleanupTask();
+        startPeriodicSaveTask();
+        logger.info("Scheduled tasks restarted with updated configuration");
+    }
+
     // Utility methods
     public int getActiveCooldownCount() {
-        return cooldowns.size();
+        Instant now = Instant.now();
+        int count = 0;
+        for (Instant end : cooldowns.values()) {
+            if (end.isAfter(now)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     @NotNull

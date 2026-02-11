@@ -1,4 +1,4 @@
-package dev.oakheart.raidcooldown.listener;
+package dev.oakheart.raidcooldown.listeners;
 
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
 import org.bukkit.entity.Player;
@@ -30,10 +30,6 @@ public class RaidListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onRaidTrigger(@NotNull RaidTriggerEvent event) {
         Player player = event.getPlayer();
-
-        if (player == null) {
-            return; // Safety check
-        }
 
         // Atomically check if player can start raid and set cooldown
         // This prevents race conditions
