@@ -1,7 +1,7 @@
 # 🛡️ RaidCooldown Plugin
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Paper Version](https://img.shields.io/badge/Paper-1.21.4+-blue.svg)](https://papermc.io/)
+[![Paper Version](https://img.shields.io/badge/Paper-1.21.10+-blue.svg)](https://papermc.io/)
 [![Java Version](https://img.shields.io/badge/Java-21+-orange.svg)](https://adoptium.net/)
 
 A comprehensive Minecraft Paper plugin that adds configurable cooldowns to raids with persistent storage and advanced management features.
@@ -124,19 +124,19 @@ The plugin supports full MiniMessage formatting for rich text, colors, and forma
 
 ```yaml
 messages:
-  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow>%time%</yellow>."
+  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow><time></yellow>."
   raidAvailableMessage: "<green>You can start a raid now!"
   # ... more messages
 ```
 
 #### Placeholders
 
-- `%player%` - Player name
-- `%time%` - Formatted time remaining
-- `%count%` - Number of active cooldowns
-- `%duration%` - Cooldown duration
-- `%error%` - Error message
-- `%valid%` - Config validation status
+- `<player>` - Player name
+- `<time>` - Formatted time remaining
+- `<count>` - Number of active cooldowns
+- `<duration>` - Cooldown duration
+- `<error>` - Error message
+- `<valid>` - Config validation status
 
 **MiniMessage Formatting Examples:**
 - `<red>Red text</red>` - Basic colors
@@ -155,7 +155,7 @@ messages:
 
 ## Requirements
 
-- **Server**: Paper 1.21.4 or newer
+- **Server**: Paper 1.21.10 or newer
 - **Java**: Java 21 or newer
 - **Dependencies**: None (all included)
 
@@ -167,7 +167,7 @@ cd RaidCooldown
 ./gradlew build
 ```
 
-The compiled plugin will be in `build/libs/RaidCooldown-1.3.0.jar`
+The compiled plugin will be in `build/libs/RaidCooldown-1.4.0.jar`
 
 ## API Usage
 
@@ -198,7 +198,7 @@ The plugin is built with a modular architecture:
 - **MessageManager**: Message formatting and MiniMessage integration
 - **ConfigManager**: Configuration loading and validation
 - **RaidListener**: Event handling for raid triggers
-- **RaidCooldownCommand**: Command processing and tab completion
+- **RaidCooldownCommand**: Brigadier command registration and execution
 
 ## Contributing
 
@@ -219,6 +219,30 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Questions**: [GitHub Discussions](https://github.com/LoralonMC/RaidCooldown/discussions)
 
 ## Changelog
+
+### Version 1.4.0
+
+**Modernization:**
+- Migrated to Configurate for configuration management (replacing Bukkit's FileConfiguration)
+- Added `paper-plugin.yml` as primary plugin descriptor
+- Migrated commands to Brigadier via Paper's LifecycleEventManager
+- Migrated message placeholders from `%placeholder%` to MiniMessage `<placeholder>` tag syntax
+- Modernized `build.gradle` (shadow 9.3.1, Paper 1.21.10, Configurate relocations)
+- Stripped `plugin.yml` to permissions-only
+
+**Bug Fixes:**
+- Fixed `validateConfig()` always returning true — now properly distinguishes fatal errors from warnings
+- Fixed reload command ignoring failed config reload — now sends error message on failure
+- Fixed scheduled tasks (cleanup, periodic save) not restarting on config reload
+- Fixed PlaceholderAPI expansion using hardcoded time format suffixes instead of config values
+- Fixed `getActiveCooldownCount()` including expired entries in count
+- Fixed minor race condition in batch save between copy and clear
+- Changed Configurate dependency from SNAPSHOT to stable release (4.2.0)
+
+**Breaking Changes:**
+- Message placeholders changed from `%player%` to `<player>`, `%time%` to `<time>`, etc.
+- If you have custom messages, update all `%placeholder%` to `<placeholder>` syntax
+- Requires Paper 1.21.10+ (previously 1.21.4+)
 
 ### Version 1.3.0
 
@@ -243,8 +267,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Added comprehensive config validation on load with warnings for invalid settings
 
 **Breaking Changes:**
-- Changed placeholder format from `{key}` to `%key%` for consistency with other Bukkit plugins
-- If you have custom messages, update `{player}` to `%player%` and `{time}` to `%time%`
+- Changed placeholder format from `{key}` to `%key%` (later changed to `<key>` in v1.4.0)
 - Simplified default config messages to use standard text instead of Unicode fancy text
 - Old configs will continue to work, but new installs get cleaner defaults
 
