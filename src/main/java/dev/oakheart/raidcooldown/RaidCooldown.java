@@ -13,17 +13,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.logging.Level;
 
-/**
- * Main plugin class for RaidCooldown.
- * <p>
- * This plugin adds configurable cooldowns to Minecraft raids, preventing players from
- * triggering raids too frequently. Features include persistent storage, automatic cleanup,
- * comprehensive admin commands, and rich message formatting with MiniMessage support.
- * </p>
- *
- * @author Loralon
- * @version 1.3.0
- */
 public class RaidCooldown extends JavaPlugin {
 
     private ConfigManager configManager;

@@ -164,10 +164,10 @@ messages:
 ```bash
 git clone https://github.com/LoralonMC/RaidCooldown.git
 cd RaidCooldown
-./gradlew build
+./gradlew shadowJar
 ```
 
-The compiled plugin will be in `build/libs/RaidCooldown-1.4.0.jar`
+The compiled plugin will be in `build/libs/RaidCooldown-1.5.0.jar`
 
 ## API Usage
 
@@ -220,14 +220,26 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Changelog
 
+### Version 1.5.0
+
+**Improvements:**
+- Switched from Configurate to Bukkit's FileConfiguration — config comments and formatting are now preserved on save
+- Empty messages are now treated as disabled — set any message to `""` to suppress it
+- Added try-catch around player selector resolution for safer command execution
+- Removed Configurate dependency, reducing JAR size
+
+**Cleanup:**
+- Removed dead message keys (`noPermissionMessage`, `usage`) left over from Brigadier migration
+- Removed dead code (`getAllActiveCooldowns()`, unused message constants)
+- Removed stale javadoc `@version` tags and unnecessary `@SuppressWarnings`
+
 ### Version 1.4.0
 
 **Modernization:**
-- Migrated to Configurate for configuration management (replacing Bukkit's FileConfiguration)
 - Added `paper-plugin.yml` as primary plugin descriptor
 - Migrated commands to Brigadier via Paper's LifecycleEventManager
 - Migrated message placeholders from `%placeholder%` to MiniMessage `<placeholder>` tag syntax
-- Modernized `build.gradle` (shadow 9.3.1, Paper 1.21.10, Configurate relocations)
+- Modernized `build.gradle` (shadow 9.3.1, Paper 1.21.10)
 - Stripped `plugin.yml` to permissions-only
 
 **Bug Fixes:**
@@ -237,7 +249,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Fixed PlaceholderAPI expansion using hardcoded time format suffixes instead of config values
 - Fixed `getActiveCooldownCount()` including expired entries in count
 - Fixed minor race condition in batch save between copy and clear
-- Changed Configurate dependency from SNAPSHOT to stable release (4.2.0)
 
 **Breaking Changes:**
 - Message placeholders changed from `%player%` to `<player>`, `%time%` to `<time>`, etc.

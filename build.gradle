@@ -4,8 +4,7 @@ plugins {
 }
 
 group = 'dev.oakheart'
-version = '1.4.0'
-description = 'RaidCooldown'
+version = '1.5.0'
 
 repositories {
     mavenCentral()
@@ -23,7 +22,6 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT")
     compileOnly("me.clip:placeholderapi:2.11.6")
     implementation("org.bstats:bstats-bukkit:3.1.0")
-    implementation("org.spongepowered:configurate-yaml:4.2.0")
 }
 
 java {
@@ -47,9 +45,6 @@ processResources {
 
 shadowJar {
     relocate 'org.bstats', 'dev.oakheart.raidcooldown.bstats'
-    relocate 'org.spongepowered.configurate', 'dev.oakheart.raidcooldown.configurate'
-    relocate 'org.yaml.snakeyaml', 'dev.oakheart.raidcooldown.snakeyaml'
-    relocate 'io.leangen.geantyref', 'dev.oakheart.raidcooldown.geantyref'
     archiveClassifier.set('')
 }
 

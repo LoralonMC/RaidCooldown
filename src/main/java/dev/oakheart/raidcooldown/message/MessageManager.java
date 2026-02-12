@@ -13,8 +13,7 @@ import java.time.Duration;
 
 /**
  * Handles all player messaging with MiniMessage formatting support.
- * <p>
- * Uses TagResolver API with Placeholder.unparsed() for dynamic content.
+ * Empty messages are treated as disabled and not sent.
  */
 public class MessageManager {
 
@@ -23,10 +22,8 @@ public class MessageManager {
 
     // Message key constants
     public static final String ONLY_PLAYERS = "onlyPlayersMessage";
-    public static final String NO_PERMISSION = "noPermissionMessage";
     public static final String PLAYER_NOT_FOUND = "playerNotFoundMessage";
     public static final String RELOAD_SUCCESS = "reloadMessage";
-    public static final String USAGE = "usage";
     public static final String RAID_BLOCKED = "raidCooldownMessage";
     public static final String COOLDOWN_REMAINING_SELF = "cooldownRemainingMessage";
     public static final String COOLDOWN_REMAINING_OTHER = "cooldownRemainingOtherMessage";
@@ -51,26 +48,17 @@ public class MessageManager {
     }
 
     public void sendMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull TagResolver... resolvers) {
-        Component message = buildMessage(messageKey, resolvers);
-        sender.sendMessage(message);
-    }
-
-    @NotNull
-    public Component buildMessage(@NotNull String messageKey, @NotNull TagResolver... resolvers) {
         String rawMessage = configManager.getMessage(messageKey);
-        return miniMessage.deserialize(rawMessage, resolvers);
-    }
-
-    @NotNull
-    public Component buildCooldownMessage(@NotNull String messageKey, @NotNull OfflinePlayer player, @NotNull Duration remainingTime) {
-        return buildMessage(messageKey,
-                Placeholder.unparsed("player", getPlayerName(player)),
-                Placeholder.unparsed("time", formatDuration(remainingTime)));
+        if (rawMessage.isEmpty()) return;
+        sender.sendMessage(miniMessage.deserialize(rawMessage, resolvers));
     }
 
     public void sendCooldownMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull OfflinePlayer player, @NotNull Duration remainingTime) {
-        Component message = buildCooldownMessage(messageKey, player, remainingTime);
-        sender.sendMessage(message);
+        String rawMessage = configManager.getMessage(messageKey);
+        if (rawMessage.isEmpty()) return;
+        sender.sendMessage(miniMessage.deserialize(rawMessage,
+                Placeholder.unparsed("player", getPlayerName(player)),
+                Placeholder.unparsed("time", formatDuration(remainingTime))));
     }
 
     public void sendRaidBlockedMessage(@NotNull CommandSender sender, @NotNull Duration remainingTime) {
@@ -108,11 +96,5 @@ public class MessageManager {
     private String getPlayerName(@NotNull OfflinePlayer player) {
         String name = player.getName();
         return name != null ? name : "Unknown Player";
-    }
-
-    @NotNull
-    public Component formatPlayerMessage(@NotNull String messageKey, @NotNull OfflinePlayer player) {
-        return buildMessage(messageKey,
-                Placeholder.unparsed("player", getPlayerName(player)));
     }
 }

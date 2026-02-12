@@ -8,17 +8,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.raid.RaidTriggerEvent;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * Listens for raid trigger events and enforces cooldowns.
- * <p>
- * Intercepts {@link RaidTriggerEvent} at HIGH priority to check and enforce
- * player cooldowns before allowing raids to start. Uses atomic operations
- * to prevent race conditions in concurrent raid triggering scenarios.
- * </p>
- *
- * @author Loralon
- * @version 1.3.0
- */
 public class RaidListener implements Listener {
 
     private final CooldownManager cooldownManager;

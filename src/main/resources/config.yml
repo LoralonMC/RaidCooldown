@@ -39,10 +39,8 @@ placeholderapi:
 messages:
   # General messages
   onlyPlayersMessage: "<red>Only players can use this command."
-  noPermissionMessage: "<red>You do not have permission to use this command."
   playerNotFoundMessage: "<red>Player <yellow><player></yellow> not found or is offline."
   reloadMessage: "<green>RaidCooldown configuration reloaded successfully!"
-  usage: "<red>Usage: <yellow>/raidcooldown [check <player>] [reset <player>] [reload] [info]"
 
   # Raid cooldown messages
   raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow><time></yellow>."

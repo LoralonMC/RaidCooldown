@@ -62,7 +62,14 @@ public class RaidCooldownCommand {
                                 .executes(ctx -> {
                                     CommandSender sender = ctx.getSource().getSender();
                                     PlayerSelectorArgumentResolver resolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
-                                    List<Player> players = resolver.resolve(ctx.getSource());
+                                    List<Player> players;
+                                    try {
+                                        players = resolver.resolve(ctx.getSource());
+                                    } catch (Exception e) {
+                                        messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND,
+                                                Placeholder.unparsed("player", "unknown"));
+                                        return Command.SINGLE_SUCCESS;
+                                    }
 
                                     if (players.isEmpty()) {
                                         messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND,
@@ -81,7 +88,14 @@ public class RaidCooldownCommand {
                                 .executes(ctx -> {
                                     CommandSender sender = ctx.getSource().getSender();
                                     PlayerSelectorArgumentResolver resolver = ctx.getArgument("player", PlayerSelectorArgumentResolver.class);
-                                    List<Player> players = resolver.resolve(ctx.getSource());
+                                    List<Player> players;
+                                    try {
+                                        players = resolver.resolve(ctx.getSource());
+                                    } catch (Exception e) {
+                                        messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND,
+                                                Placeholder.unparsed("player", "unknown"));
+                                        return Command.SINGLE_SUCCESS;
+                                    }
 
                                     if (players.isEmpty()) {
                                         messageManager.sendMessage(sender, MessageManager.PLAYER_NOT_FOUND,

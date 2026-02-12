@@ -11,21 +11,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.time.Duration;
 
-/**
- * PlaceholderAPI expansion for RaidCooldown.
- * <p>
- * Provides the following placeholders:
- * <ul>
- *   <li>%raidcooldown_time% - Formatted remaining time or ready message</li>
- *   <li>%raidcooldown_ready% - "true" if player can raid, "false" if on cooldown</li>
- *   <li>%raidcooldown_seconds% - Raw seconds remaining (0 if ready)</li>
- * </ul>
- * </p>
- *
- * @author Loralon
- * @version 1.3.0
- */
-@SuppressWarnings("deprecation") // PlaceholderExpansion API uses deprecated methods
 public class RaidCooldownExpansion extends PlaceholderExpansion {
 
     private final RaidCooldown plugin;
