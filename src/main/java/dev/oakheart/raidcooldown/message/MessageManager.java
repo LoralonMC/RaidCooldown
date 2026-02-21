@@ -4,72 +4,130 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import dev.oakheart.raidcooldown.config.ConfigManager;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Player;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
-/**
- * Handles all player messaging with MiniMessage formatting support.
- * Empty messages are treated as disabled and not sent.
- */
 public class MessageManager {
 
-    private final ConfigManager configManager;
-    private final MiniMessage miniMessage;
+    private static final String[] MESSAGE_KEYS = {
+            "raid-blocked", "cooldown-remaining", "cooldown-remaining-other",
+            "raid-available", "raid-available-other",
+            "cooldown-reset", "cooldown-reset-notification",
+            "reload-success", "reload-error",
+            "only-players", "player-not-found",
+            "info-header", "info-active-cooldowns", "info-cooldown-duration", "info-config-valid"
+    };
 
-    // Message key constants
-    public static final String ONLY_PLAYERS = "onlyPlayersMessage";
-    public static final String PLAYER_NOT_FOUND = "playerNotFoundMessage";
-    public static final String RELOAD_SUCCESS = "reloadMessage";
-    public static final String RAID_BLOCKED = "raidCooldownMessage";
-    public static final String COOLDOWN_REMAINING_SELF = "cooldownRemainingMessage";
-    public static final String COOLDOWN_REMAINING_OTHER = "cooldownRemainingOtherMessage";
-    public static final String RAID_AVAILABLE_SELF = "raidAvailableMessage";
-    public static final String RAID_AVAILABLE_OTHER = "raidAvailableOtherMessage";
-    public static final String COOLDOWN_RESET = "resetCooldownMessage";
-    public static final String COOLDOWN_RESET_NOTIFICATION = "cooldownResetNotification";
-    public static final String RELOAD_ERROR = "reloadError";
-    public static final String INFO_HEADER = "infoHeader";
-    public static final String INFO_ACTIVE_COOLDOWNS = "infoActiveCooldowns";
-    public static final String INFO_COOLDOWN_DURATION = "infoCooldownDuration";
-    public static final String INFO_CONFIG_VALID = "infoConfigValid";
+    private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final Map<String, String> texts = new HashMap<>();
+    private final Map<String, String> displays = new HashMap<>();
 
-    // Time format keys
-    private static final String HOUR_FORMAT = "hour";
-    private static final String MINUTE_FORMAT = "minute";
-    private static final String SECOND_FORMAT = "second";
+    private String hourSuffix;
+    private String minuteSuffix;
+    private String secondSuffix;
 
-    public MessageManager(@NotNull ConfigManager configManager) {
-        this.configManager = configManager;
-        this.miniMessage = MiniMessage.miniMessage();
+    public void load(FileConfiguration config) {
+        texts.clear();
+        displays.clear();
+
+        for (String key : MESSAGE_KEYS) {
+            texts.put(key, config.getString("messages." + key + ".text", ""));
+            displays.put(key, config.getString("messages." + key + ".display", "chat"));
+        }
+
+        hourSuffix = config.getString("messages.time-format.hour", "h ");
+        minuteSuffix = config.getString("messages.time-format.minute", "m ");
+        secondSuffix = config.getString("messages.time-format.second", "s");
     }
 
-    public void sendMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull TagResolver... resolvers) {
-        String rawMessage = configManager.getMessage(messageKey);
-        if (rawMessage.isEmpty()) return;
-        sender.sendMessage(miniMessage.deserialize(rawMessage, resolvers));
+    // --- Send helpers ---
+
+    public void send(CommandSender sender, String key, TagResolver... resolvers) {
+        parse(key, resolvers).ifPresent(component -> {
+            String display = displays.getOrDefault(key, "chat");
+            if ("action_bar".equals(display) && sender instanceof Player player) {
+                player.sendActionBar(component);
+            } else {
+                sender.sendMessage(component);
+            }
+        });
     }
 
-    public void sendCooldownMessage(@NotNull CommandSender sender, @NotNull String messageKey, @NotNull OfflinePlayer player, @NotNull Duration remainingTime) {
-        String rawMessage = configManager.getMessage(messageKey);
-        if (rawMessage.isEmpty()) return;
-        sender.sendMessage(miniMessage.deserialize(rawMessage,
-                Placeholder.unparsed("player", getPlayerName(player)),
-                Placeholder.unparsed("time", formatDuration(remainingTime))));
+    // --- Named convenience methods ---
+
+    public void sendRaidBlocked(CommandSender sender, Duration remaining) {
+        send(sender, "raid-blocked", Placeholder.unparsed("time", formatDuration(remaining)));
     }
 
-    public void sendRaidBlockedMessage(@NotNull CommandSender sender, @NotNull Duration remainingTime) {
-        sendMessage(sender, RAID_BLOCKED,
-                Placeholder.unparsed("time", formatDuration(remainingTime)));
+    public void sendCooldownRemaining(CommandSender sender, Duration remaining) {
+        send(sender, "cooldown-remaining", Placeholder.unparsed("time", formatDuration(remaining)));
     }
 
-    @NotNull
-    public String formatDuration(@NotNull Duration duration) {
+    public void sendCooldownRemainingOther(CommandSender sender, String playerName, Duration remaining) {
+        send(sender, "cooldown-remaining-other",
+                Placeholder.unparsed("player", playerName),
+                Placeholder.unparsed("time", formatDuration(remaining)));
+    }
+
+    public void sendRaidAvailable(CommandSender sender) {
+        send(sender, "raid-available");
+    }
+
+    public void sendRaidAvailableOther(CommandSender sender, String playerName) {
+        send(sender, "raid-available-other", Placeholder.unparsed("player", playerName));
+    }
+
+    public void sendCooldownReset(CommandSender sender, String playerName) {
+        send(sender, "cooldown-reset", Placeholder.unparsed("player", playerName));
+    }
+
+    public void sendCooldownResetNotification(CommandSender sender) {
+        send(sender, "cooldown-reset-notification");
+    }
+
+    public void sendReloadSuccess(CommandSender sender) {
+        send(sender, "reload-success");
+    }
+
+    public void sendReloadError(CommandSender sender, String error) {
+        send(sender, "reload-error", Placeholder.unparsed("error", error));
+    }
+
+    public void sendOnlyPlayers(CommandSender sender) {
+        send(sender, "only-players");
+    }
+
+    public void sendPlayerNotFound(CommandSender sender, String playerName) {
+        send(sender, "player-not-found", Placeholder.unparsed("player", playerName));
+    }
+
+    public void sendInfoHeader(CommandSender sender) {
+        send(sender, "info-header");
+    }
+
+    public void sendInfoActiveCooldowns(CommandSender sender, int count) {
+        send(sender, "info-active-cooldowns", Placeholder.unparsed("count", String.valueOf(count)));
+    }
+
+    public void sendInfoCooldownDuration(CommandSender sender, long hours) {
+        send(sender, "info-cooldown-duration", Placeholder.unparsed("duration", String.valueOf(hours)));
+    }
+
+    public void sendInfoConfigValid(CommandSender sender, boolean valid) {
+        send(sender, "info-config-valid", Placeholder.unparsed("valid", String.valueOf(valid)));
+    }
+
+    // --- Duration formatting ---
+
+    public String formatDuration(Duration duration) {
         if (duration.isZero() || duration.isNegative()) {
-            return "0" + configManager.getMessage(SECOND_FORMAT, "s");
+            return "0" + secondSuffix;
         }
 
         long totalSeconds = duration.getSeconds();
@@ -80,21 +138,25 @@ public class MessageManager {
         StringBuilder result = new StringBuilder();
 
         if (hours > 0) {
-            result.append(hours).append(configManager.getMessage(HOUR_FORMAT, "h "));
+            result.append(hours).append(hourSuffix);
         }
         if (minutes > 0) {
-            result.append(minutes).append(configManager.getMessage(MINUTE_FORMAT, "m "));
+            result.append(minutes).append(minuteSuffix);
         }
         if (seconds > 0 || result.isEmpty()) {
-            result.append(seconds).append(configManager.getMessage(SECOND_FORMAT, "s"));
+            result.append(seconds).append(secondSuffix);
         }
 
         return result.toString().trim();
     }
 
-    @NotNull
-    private String getPlayerName(@NotNull OfflinePlayer player) {
-        String name = player.getName();
-        return name != null ? name : "Unknown Player";
+    // --- Internal ---
+
+    private Optional<Component> parse(String key, TagResolver... resolvers) {
+        String text = texts.get(key);
+        if (text == null || text.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(miniMessage.deserialize(text, resolvers));
     }
 }

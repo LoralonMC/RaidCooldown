@@ -1,6 +1,6 @@
 permissions:
   raidcooldown.*:
-    description: 'Grants all RaidCooldown permissions'
+    description: 'All RaidCooldown permissions'
     default: op
     children:
       raidcooldown.check: true
@@ -8,23 +8,18 @@ permissions:
       raidcooldown.reload: true
       raidcooldown.info: true
       raidcooldown.bypass: true
-
   raidcooldown.check:
-    description: 'Allows checking other players raid cooldown status'
+    description: 'Check other players raid cooldown status'
     default: op
-
   raidcooldown.reset:
-    description: 'Allows resetting another players raid cooldown'
+    description: 'Reset another players raid cooldown'
     default: op
-
   raidcooldown.reload:
-    description: 'Allows reloading the plugin configuration'
+    description: 'Reload configuration'
     default: op
-
   raidcooldown.info:
-    description: 'Allows viewing plugin information and statistics'
+    description: 'View plugin information and statistics'
     default: op
-
   raidcooldown.bypass:
-    description: 'Bypasses raid cooldowns entirely'
+    description: 'Bypass raid cooldowns entirely'
     default: false

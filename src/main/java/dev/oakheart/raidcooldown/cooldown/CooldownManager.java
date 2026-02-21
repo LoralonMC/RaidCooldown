@@ -2,15 +2,17 @@ package dev.oakheart.raidcooldown.cooldown;
 
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.message.MessageManager;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.jetbrains.annotations.NotNull;
+import org.bukkit.scheduler.BukkitTask;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
@@ -25,9 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-/**
- * Manages raid cooldowns for players with persistent storage and automatic cleanup.
- */
 public class CooldownManager {
 
     private final JavaPlugin plugin;
@@ -35,32 +34,31 @@ public class CooldownManager {
     private final MessageManager messageManager;
     private final Logger logger;
 
+    private final File cooldownFile;
+    private FileConfiguration cooldownConfig;
+
     private final Map<UUID, Instant> cooldowns;
     private final Set<UUID> dirtyCooldowns;
 
-    private BukkitRunnable cleanupTask;
-    private BukkitRunnable saveTask;
+    private BukkitTask cleanupTask;
+    private BukkitTask saveTask;
 
-    public CooldownManager(@NotNull JavaPlugin plugin, @NotNull ConfigManager configManager, @NotNull MessageManager messageManager) {
+    public CooldownManager(JavaPlugin plugin, ConfigManager configManager, MessageManager messageManager) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
         this.logger = plugin.getLogger();
+        this.cooldownFile = new File(plugin.getDataFolder(), "cooldowns.yml");
         this.cooldowns = new ConcurrentHashMap<>();
         this.dirtyCooldowns = ConcurrentHashMap.newKeySet();
 
+        setupCooldownFile();
         loadCooldownData();
         startCleanupTask();
         startPeriodicSaveTask();
     }
 
-    /**
-     * Atomically checks if a player can start a raid and sets the cooldown if they can.
-     *
-     * @param player The player attempting to start a raid
-     * @return true if the raid was allowed and cooldown was set, false if on cooldown
-     */
-    public synchronized boolean canStartRaidAndSetCooldown(@NotNull Player player) {
+    public synchronized boolean canStartRaidAndSetCooldown(Player player) {
         if (player.hasPermission("raidcooldown.bypass")) {
             return true;
         }
@@ -80,11 +78,10 @@ public class CooldownManager {
             return true;
         }
 
-        messageManager.sendRaidBlockedMessage(player, remaining);
+        messageManager.sendRaidBlocked(player, remaining);
         return false;
     }
 
-    @NotNull
     private Instant calculateCooldownEnd() {
         if (configManager.isSynchronizedResetEnabled()) {
             return calculateNextResetTime();
@@ -92,7 +89,6 @@ public class CooldownManager {
         return Instant.now().plus(configManager.getCooldownDuration());
     }
 
-    @NotNull
     private Instant calculateNextResetTime() {
         LocalTime resetTime = configManager.getResetTime();
         ZoneId serverZone = ZoneId.systemDefault();
@@ -107,8 +103,7 @@ public class CooldownManager {
         return todayReset.toInstant();
     }
 
-    @NotNull
-    public Duration getRemainingCooldown(@NotNull UUID playerId) {
+    public Duration getRemainingCooldown(UUID playerId) {
         Instant cooldownEnd = cooldowns.get(playerId);
 
         if (cooldownEnd == null) {
@@ -119,11 +114,11 @@ public class CooldownManager {
         return remaining.isNegative() ? Duration.ZERO : remaining;
     }
 
-    public boolean hasCooldown(@NotNull UUID playerId) {
+    public boolean hasCooldown(UUID playerId) {
         return !getRemainingCooldown(playerId).isZero();
     }
 
-    public void removeCooldown(@NotNull UUID playerId) {
+    public void removeCooldown(UUID playerId) {
         cooldowns.remove(playerId);
         dirtyCooldowns.add(playerId);
 
@@ -133,30 +128,43 @@ public class CooldownManager {
         }
     }
 
-    public void sendCooldownStatus(@NotNull org.bukkit.command.CommandSender sender, @NotNull Player target) {
+    public void sendCooldownStatus(CommandSender sender, Player target) {
         UUID targetId = target.getUniqueId();
         Duration remaining = getRemainingCooldown(targetId);
         boolean isSelfCheck = sender instanceof Player && sender.equals(target);
 
         if (remaining.isZero()) {
-            String messageKey = isSelfCheck ?
-                    MessageManager.RAID_AVAILABLE_SELF :
-                    MessageManager.RAID_AVAILABLE_OTHER;
-            messageManager.sendMessage(sender, messageKey,
-                    Placeholder.unparsed("player", target.getName()));
+            if (isSelfCheck) {
+                messageManager.sendRaidAvailable(sender);
+            } else {
+                messageManager.sendRaidAvailableOther(sender, target.getName());
+            }
         } else {
-            String messageKey = isSelfCheck ?
-                    MessageManager.COOLDOWN_REMAINING_SELF :
-                    MessageManager.COOLDOWN_REMAINING_OTHER;
-            messageManager.sendCooldownMessage(sender, messageKey, target, remaining);
+            if (isSelfCheck) {
+                messageManager.sendCooldownRemaining(sender, remaining);
+            } else {
+                messageManager.sendCooldownRemainingOther(sender, target.getName(), remaining);
+            }
         }
+    }
+
+    private void setupCooldownFile() {
+        if (!cooldownFile.exists()) {
+            try {
+                cooldownFile.getParentFile().mkdirs();
+                cooldownFile.createNewFile();
+                logger.info("Created new cooldowns.yml file");
+            } catch (IOException e) {
+                throw new RuntimeException("Could not create cooldowns.yml", e);
+            }
+        }
+        this.cooldownConfig = YamlConfiguration.loadConfiguration(cooldownFile);
     }
 
     private void loadCooldownData() {
         int loaded = 0;
         int expired = 0;
         Instant now = Instant.now();
-        FileConfiguration cooldownConfig = configManager.getCooldownConfig();
 
         for (String key : new ArrayList<>(cooldownConfig.getKeys(false))) {
             try {
@@ -177,7 +185,7 @@ public class CooldownManager {
         }
 
         if (expired > 0) {
-            configManager.saveCooldownConfig();
+            saveCooldownFile();
         }
 
         logger.info("Loaded " + loaded + " active cooldowns, cleaned up " + expired + " expired cooldowns");
@@ -191,7 +199,6 @@ public class CooldownManager {
         Set<UUID> toSave = new HashSet<>();
         dirtyCooldowns.removeIf(toSave::add);
 
-        FileConfiguration cooldownConfig = configManager.getCooldownConfig();
         int saved = 0;
         for (UUID playerId : toSave) {
             Instant cooldownEnd = cooldowns.get(playerId);
@@ -204,36 +211,30 @@ public class CooldownManager {
         }
 
         if (saved > 0 || toSave.size() > saved) {
-            configManager.saveCooldownConfig();
+            saveCooldownFile();
             if (configManager.shouldLogCooldownActions() && saved > 0) {
-                logger.fine("Batch saved " + saved + " cooldowns");
+                logger.info("Batch saved " + saved + " cooldowns");
             }
+        }
+    }
+
+    private void saveCooldownFile() {
+        try {
+            cooldownConfig.save(cooldownFile);
+        } catch (IOException e) {
+            logger.severe("Could not save cooldown data: " + e.getMessage());
         }
     }
 
     private void startCleanupTask() {
-        cleanupTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                cleanupExpiredCooldowns();
-            }
-        };
-
         long intervalTicks = configManager.getCleanupIntervalTicks();
         if (intervalTicks > 0) {
-            cleanupTask.runTaskTimer(plugin, intervalTicks, intervalTicks);
+            cleanupTask = Bukkit.getScheduler().runTaskTimer(plugin, this::cleanupExpiredCooldowns, intervalTicks, intervalTicks);
         }
     }
 
     private void startPeriodicSaveTask() {
-        saveTask = new BukkitRunnable() {
-            @Override
-            public void run() {
-                saveDirtyCooldowns();
-            }
-        };
-
-        saveTask.runTaskTimer(plugin, 600L, 600L);
+        saveTask = Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, this::saveDirtyCooldowns, 600L, 600L);
     }
 
     private void cleanupExpiredCooldowns() {
@@ -268,10 +269,6 @@ public class CooldownManager {
         logger.info("CooldownManager shut down successfully");
     }
 
-    /**
-     * Restarts scheduled tasks with current configuration values.
-     * Called after a successful config reload.
-     */
     public void restartTasks() {
         if (cleanupTask != null) {
             cleanupTask.cancel();

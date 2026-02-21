@@ -1,66 +1,101 @@
-# RaidCooldown Configuration
+# ============================================================
+# RaidCooldown
+# Adds configurable cooldowns to raids with persistent storage.
+# ============================================================
 
-# Raid cooldown duration in seconds (86400 = 24 hours)
-raidCooldownSeconds: 86400
+# ============================================================
+# GENERAL SETTINGS
+# ============================================================
+raid-cooldown-seconds: 86400
 
-# Advanced Settings
 settings:
-  # Whether to cleanup expired cooldowns automatically
-  autoCleanup: true
-  # Interval for cleanup task in minutes (0 to disable)
-  cleanupIntervalMinutes: 10
-  # Whether to log cooldown actions to console
-  logCooldownActions: true
+  auto-cleanup: true
+  cleanup-interval-minutes: 10
+  log-cooldown-actions: true
 
-# Synchronized Reset Settings
-# When enabled, all cooldowns reset at a fixed time each day instead of
-# being relative to when each player triggered their raid.
-# Example: If resetTime is "00:00", all cooldowns expire at midnight server time.
-synchronizedReset:
-  # Set to true to enable synchronized daily reset
+# ============================================================
+# SYNCHRONIZED RESET
+# ============================================================
+# When enabled, all cooldowns reset at a fixed time each day
+# instead of being relative to when each player triggered their raid.
+# Example: If reset-time is "00:00", all cooldowns expire at midnight.
+# Note: When enabled, raid-cooldown-seconds is ignored.
+synchronized-reset:
   enabled: true
-  # Time of day when all cooldowns reset (24-hour format, HH:mm)
-  # Examples: "00:00" (midnight), "06:00" (6 AM), "18:30" (6:30 PM)
-  resetTime: "00:00"
+  # 24-hour format (e.g. "00:00", "06:00", "18:30")
+  reset-time: "00:00"
 
-# PlaceholderAPI Settings
+# ============================================================
+# PLACEHOLDERAPI
+# ============================================================
 # Requires PlaceholderAPI plugin to be installed
-# Available placeholders:
-#   %raidcooldown_time%    - Formatted time remaining (e.g., "2h 30m 15s") or ready message
+#   %raidcooldown_time%    - Formatted time remaining or ready message
 #   %raidcooldown_ready%   - "true" if player can raid, "false" if on cooldown
 #   %raidcooldown_seconds% - Raw seconds remaining (0 if ready)
 placeholderapi:
-  # Message shown when player has no cooldown (for %raidcooldown_time%)
-  readyMessage: "Ready"
+  ready-message: "Ready"
 
-# Customizable Messages
-# Supports MiniMessage formatting: https://docs.adventure.kyori.net/minimessage/format.html
-# Placeholders: <player>, <time>, <count>, <duration>, <error>, <valid>
+# ============================================================
+# MESSAGES
+# ============================================================
+# MiniMessage format: https://docs.advntr.dev/minimessage/format.html
+# Placeholders: <player> - Player name, <time> - Formatted time,
+#   <count> - Active cooldowns, <duration> - Duration in hours,
+#   <error> - Error details, <valid> - Config validation status
+# Set text to "" to disable individual messages
+# Display modes: chat, action_bar
 messages:
-  # General messages
-  onlyPlayersMessage: "<red>Only players can use this command."
-  playerNotFoundMessage: "<red>Player <yellow><player></yellow> not found or is offline."
-  reloadMessage: "<green>RaidCooldown configuration reloaded successfully!"
-
-  # Raid cooldown messages
-  raidCooldownMessage: "<red>You are on cooldown for starting a raid. Please wait <yellow><time></yellow>."
-  cooldownRemainingMessage: "<gray>You must wait <yellow><time></yellow> before starting another raid."
-  cooldownRemainingOtherMessage: "<yellow><player></yellow> <gray>must wait <yellow><time></yellow> before they can start another raid."
-  raidAvailableMessage: "<green>You can start a raid now!"
-  raidAvailableOtherMessage: "<green><player> can start a raid now!"
-
-  # Admin messages
-  resetCooldownMessage: "<green>Raid cooldown for <yellow><player></yellow> has been reset."
-  cooldownResetNotification: "<green>Your raid cooldown has been reset by an administrator."
-  reloadError: "<red>Error reloading configuration: <yellow><error>"
-
-  # Info command messages
-  infoHeader: "<gold>===== RaidCooldown Info ====="
-  infoActiveCooldowns: "<gray>Active cooldowns: <green><count>"
-  infoCooldownDuration: "<gray>Cooldown duration: <green><duration> hours"
-  infoConfigValid: "<gray>Config valid: <green><valid>"
-
   # Time format suffixes
-  hour: "h "
-  minute: "m "
-  second: "s"
+  time-format:
+    hour: "h "
+    minute: "m "
+    second: "s"
+  # Raid cooldown messages
+  raid-blocked:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#D89B6A>You are on cooldown. Please wait <#FCD472><time><#D89B6A>."
+    display: action_bar
+  cooldown-remaining:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#f2ebd7>You must wait <#FCD472><time><#f2ebd7> before starting another raid."
+    display: chat
+  cooldown-remaining-other:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#f2ebd7><#FCD472><player><#f2ebd7> must wait <#FCD472><time><#f2ebd7> before starting another raid."
+    display: chat
+  raid-available:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#8FAA87>You can start a raid now!"
+    display: chat
+  raid-available-other:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#8FAA87><player> can start a raid now!"
+    display: chat
+  # Admin messages
+  cooldown-reset:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#8FAA87>Raid cooldown for <#FCD472><player><#8FAA87> has been reset."
+    display: chat
+  cooldown-reset-notification:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#f2ebd7>Your raid cooldown has been reset by an administrator."
+    display: chat
+  reload-success:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#8FAA87>Configuration reloaded."
+    display: chat
+  reload-error:
+    text: "<#6C757D>[<#C27B6B>ᴇʀʀᴏʀ<#6C757D>] <#C27B6B>Error reloading configuration: <#FCD472><error><#C27B6B>."
+    display: chat
+  # Error messages
+  only-players:
+    text: "<#6C757D>[<#C27B6B>ᴇʀʀᴏʀ<#6C757D>] <#C27B6B>Only players can use this command."
+    display: chat
+  player-not-found:
+    text: "<#6C757D>[<#C27B6B>ᴇʀʀᴏʀ<#6C757D>] <#C27B6B>Player '<#FCD472><player><#C27B6B>' not found."
+    display: chat
+  # Info command
+  info-header:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#FCD472>===== RaidCooldown Info ====="
+    display: chat
+  info-active-cooldowns:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#f2ebd7>Active cooldowns: <#FCD472><count>"
+    display: chat
+  info-cooldown-duration:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#f2ebd7>Cooldown duration: <#FCD472><duration><#f2ebd7> hours"
+    display: chat
+  info-config-valid:
+    text: "<#6C757D>[<#6B7A5E>ʀᴀɪᴅ<#6C757D>] <#f2ebd7>Config valid: <#8FAA87><valid>"
+    display: chat

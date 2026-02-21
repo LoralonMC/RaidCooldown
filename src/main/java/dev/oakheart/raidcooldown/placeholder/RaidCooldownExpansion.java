@@ -18,7 +18,7 @@ public class RaidCooldownExpansion extends PlaceholderExpansion {
     private final ConfigManager configManager;
     private final MessageManager messageManager;
 
-    public RaidCooldownExpansion(@NotNull RaidCooldown plugin) {
+    public RaidCooldownExpansion(RaidCooldown plugin) {
         this.plugin = plugin;
         this.cooldownManager = plugin.getCooldownManager();
         this.configManager = plugin.getConfigManager();
@@ -45,7 +45,6 @@ public class RaidCooldownExpansion extends PlaceholderExpansion {
 
     @Override
     public boolean persist() {
-        // This expansion should persist through reloads
         return true;
     }
 
@@ -65,5 +64,4 @@ public class RaidCooldownExpansion extends PlaceholderExpansion {
             default -> null;
         };
     }
-
 }

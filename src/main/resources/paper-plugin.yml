@@ -1,7 +1,7 @@
 name: RaidCooldown
 version: '${version}'
 main: dev.oakheart.raidcooldown.RaidCooldown
-description: 'Adds configurable cooldowns to raids with persistent storage and comprehensive management commands.'
+description: 'Adds configurable cooldowns to raids with persistent storage.'
 api-version: '1.21.10'
 authors:
   - Loralon
