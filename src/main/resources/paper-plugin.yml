@@ -11,3 +11,28 @@ dependencies:
     PlaceholderAPI:
       load: BEFORE
       required: false
+permissions:
+  raidcooldown.*:
+    description: 'All RaidCooldown permissions'
+    default: op
+    children:
+      raidcooldown.check: true
+      raidcooldown.reset: true
+      raidcooldown.reload: true
+      raidcooldown.info: true
+      raidcooldown.bypass: true
+  raidcooldown.check:
+    description: 'Check other players raid cooldown status'
+    default: op
+  raidcooldown.reset:
+    description: 'Reset another players raid cooldown'
+    default: op
+  raidcooldown.reload:
+    description: 'Reload configuration'
+    default: op
+  raidcooldown.info:
+    description: 'View plugin information and statistics'
+    default: op
+  raidcooldown.bypass:
+    description: 'Bypass raid cooldowns entirely'
+    default: false
