@@ -1,13 +1,9 @@
 package dev.oakheart.raidcooldown.config;
 
 import dev.oakheart.raidcooldown.RaidCooldown;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -26,7 +22,7 @@ public class ConfigManager {
     private final RaidCooldown plugin;
     private final Logger logger;
     private final File configFile;
-    private FileConfiguration config;
+    private dev.oakheart.config.ConfigManager config;
 
     // Cached config values
     private Duration cachedCooldownDuration;
@@ -48,7 +44,12 @@ public class ConfigManager {
             plugin.saveResource("config.yml", false);
         }
 
-        config = YamlConfiguration.loadConfiguration(configFile);
+        try {
+            config = dev.oakheart.config.ConfigManager.load(configFile.toPath());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to load config.yml", e);
+        }
+
         mergeDefaults();
 
         if (!validate(config)) {
@@ -59,23 +60,16 @@ public class ConfigManager {
     }
 
     public boolean reload() {
-        FileConfiguration newConfig = YamlConfiguration.loadConfiguration(configFile);
-
-        if (!validate(newConfig)) {
-            logger.warning("Configuration reload failed validation. Keeping previous configuration.");
+        try {
+            config.reload();
+        } catch (IOException e) {
+            logger.warning("Failed to reload config.yml: " + e.getMessage());
             return false;
         }
 
-        this.config = newConfig;
-
-        // Set defaults for fallback values
-        try (var stream = plugin.getResource("config.yml")) {
-            if (stream != null) {
-                config.setDefaults(YamlConfiguration.loadConfiguration(
-                        new InputStreamReader(stream, StandardCharsets.UTF_8)));
-            }
-        } catch (IOException e) {
-            logger.warning("Could not load config defaults: " + e.getMessage());
+        if (!validate(config)) {
+            logger.warning("Configuration reload failed validation. Keeping previous configuration.");
+            return false;
         }
 
         cacheValues();
@@ -86,13 +80,9 @@ public class ConfigManager {
     private void mergeDefaults() {
         try (var stream = plugin.getResource("config.yml")) {
             if (stream != null) {
-                YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
-                        new InputStreamReader(stream, StandardCharsets.UTF_8));
-                config.setDefaults(defaults);
-
-                if (hasNewKeys(defaults)) {
-                    config.options().copyDefaults(true);
-                    config.save(configFile);
+                var defaults = dev.oakheart.config.ConfigManager.fromStream(stream);
+                if (config.mergeDefaults(defaults)) {
+                    config.save();
                     logger.info("Config updated with new default values.");
                 }
             }
@@ -101,16 +91,7 @@ public class ConfigManager {
         }
     }
 
-    private boolean hasNewKeys(FileConfiguration defaults) {
-        for (String key : defaults.getKeys(true)) {
-            if (!defaults.isConfigurationSection(key) && !config.contains(key, true)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean validate(FileConfiguration configToValidate) {
+    private boolean validate(dev.oakheart.config.ConfigManager configToValidate) {
         List<String> warnings = new ArrayList<>();
         List<String> errors = new ArrayList<>();
 
@@ -183,7 +164,7 @@ public class ConfigManager {
         }
     }
 
-    public FileConfiguration getConfig() {
+    public dev.oakheart.config.ConfigManager getConfig() {
         return config;
     }
 

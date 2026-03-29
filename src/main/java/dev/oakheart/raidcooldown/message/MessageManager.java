@@ -5,7 +5,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
+import dev.oakheart.config.ConfigManager;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
@@ -32,7 +32,7 @@ public class MessageManager {
     private String minuteSuffix;
     private String secondSuffix;
 
-    public void load(FileConfiguration config) {
+    public void load(ConfigManager config) {
         texts.clear();
         displays.clear();
 
