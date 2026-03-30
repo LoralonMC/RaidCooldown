@@ -1,7 +1,9 @@
 package dev.oakheart.raidcooldown.cooldown;
 
+import dev.oakheart.raidcooldown.RaidCooldown;
 import dev.oakheart.raidcooldown.config.ConfigManager;
-import dev.oakheart.raidcooldown.message.MessageManager;
+import dev.oakheart.message.MessageManager;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -29,7 +31,7 @@ import java.util.logging.Logger;
 
 public class CooldownManager {
 
-    private final JavaPlugin plugin;
+    private final RaidCooldown plugin;
     private final ConfigManager configManager;
     private final MessageManager messageManager;
     private final Logger logger;
@@ -43,7 +45,7 @@ public class CooldownManager {
     private BukkitTask cleanupTask;
     private BukkitTask saveTask;
 
-    public CooldownManager(JavaPlugin plugin, ConfigManager configManager, MessageManager messageManager) {
+    public CooldownManager(RaidCooldown plugin, ConfigManager configManager, MessageManager messageManager) {
         this.plugin = plugin;
         this.configManager = configManager;
         this.messageManager = messageManager;
@@ -78,7 +80,8 @@ public class CooldownManager {
             return true;
         }
 
-        messageManager.sendRaidBlocked(player, remaining);
+        messageManager.send(player, "raid-blocked",
+                Placeholder.unparsed("time", plugin.formatDuration(remaining)));
         return false;
     }
 
@@ -135,15 +138,19 @@ public class CooldownManager {
 
         if (remaining.isZero()) {
             if (isSelfCheck) {
-                messageManager.sendRaidAvailable(sender);
+                messageManager.send(sender, "raid-available");
             } else {
-                messageManager.sendRaidAvailableOther(sender, target.getName());
+                messageManager.send(sender, "raid-available-other",
+                        Placeholder.unparsed("player", target.getName()));
             }
         } else {
             if (isSelfCheck) {
-                messageManager.sendCooldownRemaining(sender, remaining);
+                messageManager.send(sender, "cooldown-remaining",
+                        Placeholder.unparsed("time", plugin.formatDuration(remaining)));
             } else {
-                messageManager.sendCooldownRemainingOther(sender, target.getName(), remaining);
+                messageManager.send(sender, "cooldown-remaining-other",
+                        Placeholder.unparsed("player", target.getName()),
+                        Placeholder.unparsed("time", plugin.formatDuration(remaining)));
             }
         }
     }

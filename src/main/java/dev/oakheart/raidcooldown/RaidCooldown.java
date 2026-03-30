@@ -4,12 +4,13 @@ import dev.oakheart.raidcooldown.commands.RaidCooldownCommand;
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
 import dev.oakheart.raidcooldown.listeners.RaidListener;
-import dev.oakheart.raidcooldown.message.MessageManager;
 import dev.oakheart.raidcooldown.placeholder.RaidCooldownExpansion;
+import dev.oakheart.message.MessageManager;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.time.Duration;
 import java.util.logging.Level;
 
 public class RaidCooldown extends JavaPlugin {
@@ -46,8 +47,8 @@ public class RaidCooldown extends JavaPlugin {
         configManager = new ConfigManager(this);
         configManager.load();
 
-        messageManager = new MessageManager();
-        messageManager.load(configManager.getConfig());
+        messageManager = new MessageManager(this, getLogger());
+        messageManager.load();
 
         cooldownManager = new CooldownManager(this, configManager, messageManager);
     }
@@ -76,9 +77,34 @@ public class RaidCooldown extends JavaPlugin {
             return false;
         }
 
-        messageManager.load(configManager.getConfig());
+        messageManager.reload();
         cooldownManager.restartTasks();
         return true;
+    }
+
+    /**
+     * Format a duration using the time-format suffixes from messages.yml.
+     */
+    public String formatDuration(Duration duration) {
+        if (duration.isZero() || duration.isNegative()) {
+            return "0" + messageManager.getConfig().getString("time-format.second", "s");
+        }
+
+        String hourSuffix = messageManager.getConfig().getString("time-format.hour", "h ");
+        String minuteSuffix = messageManager.getConfig().getString("time-format.minute", "m ");
+        String secondSuffix = messageManager.getConfig().getString("time-format.second", "s");
+
+        long totalSeconds = duration.getSeconds();
+        long hours = totalSeconds / 3600;
+        long minutes = (totalSeconds % 3600) / 60;
+        long seconds = totalSeconds % 60;
+
+        StringBuilder result = new StringBuilder();
+        if (hours > 0) result.append(hours).append(hourSuffix);
+        if (minutes > 0) result.append(minutes).append(minuteSuffix);
+        if (seconds > 0 || result.isEmpty()) result.append(seconds).append(secondSuffix);
+
+        return result.toString().trim();
     }
 
     public ConfigManager getConfigManager() {

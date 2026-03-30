@@ -3,7 +3,6 @@ package dev.oakheart.raidcooldown.placeholder;
 import dev.oakheart.raidcooldown.RaidCooldown;
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
-import dev.oakheart.raidcooldown.message.MessageManager;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
@@ -16,13 +15,11 @@ public class RaidCooldownExpansion extends PlaceholderExpansion {
     private final RaidCooldown plugin;
     private final CooldownManager cooldownManager;
     private final ConfigManager configManager;
-    private final MessageManager messageManager;
 
     public RaidCooldownExpansion(RaidCooldown plugin) {
         this.plugin = plugin;
         this.cooldownManager = plugin.getCooldownManager();
         this.configManager = plugin.getConfigManager();
-        this.messageManager = plugin.getMessageManager();
     }
 
     @Override
@@ -58,7 +55,7 @@ public class RaidCooldownExpansion extends PlaceholderExpansion {
         Duration remaining = cooldownManager.getRemainingCooldown(player.getUniqueId());
 
         return switch (params.toLowerCase()) {
-            case "time" -> remaining.isZero() ? configManager.getPlaceholderReadyMessage() : messageManager.formatDuration(remaining);
+            case "time" -> remaining.isZero() ? configManager.getPlaceholderReadyMessage() : plugin.formatDuration(remaining);
             case "ready" -> String.valueOf(remaining.isZero());
             case "seconds" -> String.valueOf(remaining.getSeconds());
             default -> null;

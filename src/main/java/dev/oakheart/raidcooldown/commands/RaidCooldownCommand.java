@@ -5,16 +5,15 @@ import com.mojang.brigadier.tree.LiteralCommandNode;
 import dev.oakheart.raidcooldown.RaidCooldown;
 import dev.oakheart.raidcooldown.config.ConfigManager;
 import dev.oakheart.raidcooldown.cooldown.CooldownManager;
-import dev.oakheart.raidcooldown.message.MessageManager;
+import dev.oakheart.command.CommandRegistrar;
+import dev.oakheart.message.MessageManager;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.command.brigadier.Commands;
 import io.papermc.paper.command.brigadier.argument.ArgumentTypes;
 import io.papermc.paper.command.brigadier.argument.resolvers.selector.PlayerSelectorArgumentResolver;
-import io.papermc.paper.plugin.lifecycle.event.LifecycleEventManager;
-import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 
 import java.util.List;
 
@@ -35,11 +34,7 @@ public class RaidCooldownCommand {
     }
 
     public void register() {
-        LifecycleEventManager<Plugin> manager = plugin.getLifecycleManager();
-        manager.registerEventHandler(LifecycleEvents.COMMANDS, event -> {
-            Commands commands = event.registrar();
-            commands.register(buildCommand(), "Manage raid cooldowns", List.of("rc", "raidcd"));
-        });
+        CommandRegistrar.register(plugin, buildCommand(), "Manage raid cooldowns", List.of("rc", "raidcd"));
     }
 
     private LiteralCommandNode<CommandSourceStack> buildCommand() {
@@ -48,7 +43,7 @@ public class RaidCooldownCommand {
                 .executes(ctx -> {
                     CommandSender sender = ctx.getSource().getSender();
                     if (!(sender instanceof Player player)) {
-                        messageManager.sendOnlyPlayers(sender);
+                        messageManager.send(sender, "only-players");
                         return Command.SINGLE_SUCCESS;
                     }
                     cooldownManager.sendCooldownStatus(player, player);
@@ -65,12 +60,14 @@ public class RaidCooldownCommand {
                                     try {
                                         players = resolver.resolve(ctx.getSource());
                                     } catch (Exception e) {
-                                        messageManager.sendPlayerNotFound(sender, "unknown");
+                                        messageManager.send(sender, "player-not-found",
+                                                Placeholder.unparsed("player", "unknown"));
                                         return Command.SINGLE_SUCCESS;
                                     }
 
                                     if (players.isEmpty()) {
-                                        messageManager.sendPlayerNotFound(sender, "unknown");
+                                        messageManager.send(sender, "player-not-found",
+                                                Placeholder.unparsed("player", "unknown"));
                                         return Command.SINGLE_SUCCESS;
                                     }
 
@@ -89,19 +86,22 @@ public class RaidCooldownCommand {
                                     try {
                                         players = resolver.resolve(ctx.getSource());
                                     } catch (Exception e) {
-                                        messageManager.sendPlayerNotFound(sender, "unknown");
+                                        messageManager.send(sender, "player-not-found",
+                                                Placeholder.unparsed("player", "unknown"));
                                         return Command.SINGLE_SUCCESS;
                                     }
 
                                     if (players.isEmpty()) {
-                                        messageManager.sendPlayerNotFound(sender, "unknown");
+                                        messageManager.send(sender, "player-not-found",
+                                                Placeholder.unparsed("player", "unknown"));
                                         return Command.SINGLE_SUCCESS;
                                     }
 
                                     Player target = players.getFirst();
                                     cooldownManager.removeCooldown(target.getUniqueId());
-                                    messageManager.sendCooldownReset(sender, target.getName());
-                                    messageManager.sendCooldownResetNotification(target);
+                                    messageManager.send(sender, "cooldown-reset",
+                                            Placeholder.unparsed("player", target.getName()));
+                                    messageManager.send(target, "cooldown-reset-notification");
                                     return Command.SINGLE_SUCCESS;
                                 })))
                 // reload
@@ -111,12 +111,14 @@ public class RaidCooldownCommand {
                             CommandSender sender = ctx.getSource().getSender();
                             try {
                                 if (plugin.reloadPlugin()) {
-                                    messageManager.sendReloadSuccess(sender);
+                                    messageManager.sendCommand(sender, "reload-success");
                                 } else {
-                                    messageManager.sendReloadError(sender, "Configuration validation failed");
+                                    messageManager.sendCommand(sender, "reload-error",
+                                            Placeholder.unparsed("error", "Configuration validation failed"));
                                 }
                             } catch (Exception e) {
-                                messageManager.sendReloadError(sender, e.getMessage());
+                                messageManager.sendCommand(sender, "reload-error",
+                                        Placeholder.unparsed("error", e.getMessage()));
                             }
                             return Command.SINGLE_SUCCESS;
                         }))
@@ -128,10 +130,13 @@ public class RaidCooldownCommand {
                             int activeCooldowns = cooldownManager.getActiveCooldownCount();
                             long cooldownHours = configManager.getCooldownDuration().toHours();
 
-                            messageManager.sendInfoHeader(sender);
-                            messageManager.sendInfoActiveCooldowns(sender, activeCooldowns);
-                            messageManager.sendInfoCooldownDuration(sender, cooldownHours);
-                            messageManager.sendInfoConfigValid(sender, true);
+                            messageManager.send(sender, "info-header");
+                            messageManager.send(sender, "info-active-cooldowns",
+                                    Placeholder.unparsed("count", String.valueOf(activeCooldowns)));
+                            messageManager.send(sender, "info-cooldown-duration",
+                                    Placeholder.unparsed("duration", String.valueOf(cooldownHours)));
+                            messageManager.send(sender, "info-config-valid",
+                                    Placeholder.unparsed("valid", String.valueOf(true)));
                             return Command.SINGLE_SUCCESS;
                         }))
                 .build();
