@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-03-30
+
 ### Changed
 
-- Migrate config management from Bukkit's FileConfiguration to OakheartLib — config comments, formatting, and quoting are now perfectly preserved on every save and default merge
+- Migrate to OakheartLib shared library (config, messages, commands)
+- Move messages from config.yml to separate messages.yml — existing servers migrate automatically on first startup
+- Config comments, formatting, and quoting are now perfectly preserved on every save and default merge
 
 ## [2.0.0] - 2026-02-21
 
